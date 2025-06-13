@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Invoice</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Import Google Font for a modern look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <div class="w-full max-w-4xl bg-white shadow-lg rounded-xl overflow-hidden p-6 md:p-8">
+        <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 md:p-6 text-center rounded-t-lg">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2">Create New Invoice</h1>
+            <p class="text-lg opacity-90">Generate professional invoices for your customers</p>
+        </header>
+
+        <main class="py-6">
+            <!-- Navigation back to main POS -->
+            <div class="mb-6">
+                <a href="index.html" class="inline-flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to POS
+                </a>
+            </div>
+
+            <!-- Customer Information Section -->
+            <section class="bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Customer Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="customer-name" class="block text-gray-700 text-sm font-bold mb-2">Customer Name:</label>
+                        <input type="text" id="customer-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="e.g., John Smith">
+                    </div>
+                    <div>
+                        <label for="customer-address" class="block text-gray-700 text-sm font-bold mb-2">Customer Address:</label>
+                        <input type="text" id="customer-address" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="e.g., 456 Oak Ave, Town">
+                    </div>
+                    <div>
+                        <label for="customer-email" class="block text-gray-700 text-sm font-bold mb-2">Customer Email:</label>
+                        <input type="email" id="customer-email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="e.g., customer@example.com">
+                    </div>
+                    <div>
+                        <label for="invoice-date" class="block text-gray-700 text-sm font-bold mb-2">Invoice Date:</label>
+                        <input type="date" id="invoice-date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="due-date" class="block text-gray-700 text-sm font-bold mb-2">Due Date:</label>
+                        <input type="date" id="due-date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add Items Section -->
+            <section class="bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Add Invoice Items</h2>
+
+                <!-- Add Existing Product -->
+                <div class="bg-white p-4 rounded-lg shadow-md mb-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Add Existing Product</h3>
+                    <div class="flex flex-col sm:flex-row gap-3 items-end">
+                        <div class="flex-grow w-full">
+                            <label for="existing-product-select" class="block text-gray-700 text-sm font-bold mb-2">Select Product:</label>
+                            <select id="existing-product-select" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                <option value="">-- Select a product --</option>
+                                <!-- Products will be loaded here by JavaScript -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="existing-product-qty" class="block text-gray-700 text-sm font-bold mb-2">Quantity:</label>
+                            <input type="number" id="existing-product-qty" value="1" min="1" class="shadow appearance-none border rounded w-24 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        </div>
+                        <button id="add-existing-product" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
+                            Add Selected
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Custom Item -->
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="font-semibold text-gray-700 mb-3">Add Custom Item (e.g., service, non-stock item)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label for="custom-item-name" class="block text-gray-700 text-sm font-bold mb-2">Item Name:</label>
+                            <input type="text" id="custom-item-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="e.g., Consulting Service">
+                        </div>
+                        <div>
+                            <label for="custom-item-price" class="block text-gray-700 text-sm font-bold mb-2">Price:</label>
+                            <input type="number" step="0.01" id="custom-item-price" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="e.g., 50.00">
+                        </div>
+                        <div>
+                            <label for="custom-item-qty" class="block text-gray-700 text-sm font-bold mb-2">Quantity:</label>
+                            <input type="number" id="custom-item-qty" value="1" min="1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                        </div>
+                    </div>
+                    <button id="add-custom-item" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+                        Add Custom Item
+                    </button>
+                </div>
+            </section>
+
+            <!-- Invoice Items List -->
+            <section class="bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Invoice Items</h2>
+                <div id="invoice-items-container" class="space-y-3 max-h-96 overflow-y-auto border-b pb-4">
+                    <!-- Invoice items will be dynamically listed here -->
+                    <p id="empty-invoice-message" class="text-gray-500 italic text-center py-4">No items added to invoice yet.</p>
+                </div>
+                <!-- Summary Section -->
+                <div class="border-t border-gray-300 pt-4 mt-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-700">Subtotal:</span>
+                        <span id="invoice-subtotal" class="font-medium text-gray-800">$0.00</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-700">Tax (<span id="invoice-tax-rate-display">0</span>%):</span>
+                        <span id="invoice-tax" class="font-medium text-gray-800">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold text-gray-900 mb-4">
+                        <span>Total:</span>
+                        <span id="invoice-total">$0.00</span>
+                    </div>
+                    <!-- Action Buttons -->
+                    <button id="generate-invoice-pdf" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Generate Invoice PDF
+                    </button>
+                    <button id="clear-invoice" class="w-full mt-2 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Clear Invoice
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Message Box (from main app, reused here) -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+            <p id="message-text" class="text-lg font-semibold text-gray-800 mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="message-ok-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">OK</button>
+                <button id="message-cancel-button" class="bg-gray-300 hover:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-300 hidden">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Your invoice page JavaScript logic -->
+    <script src="invoice.js"></script>
+</body>
+</html>
