@@ -11,9 +11,15 @@
     const businessEmailInput = document.getElementById('business-email');
     const businessRegNoInput = document.getElementById('business-reg-no');
     const taxNumberInput = document.getElementById('tax-number');
-    const cashierNameInput = document.getElementById('cashier-name');
+    const technicianNameInput = document.getElementById('technician-name'); // Changed from cashier-name
     const businessLogoUpload = document.getElementById('business-logo-upload');
     const businessLogoPreview = document.getElementById('business-logo-preview');
+
+    // New: Bank Account Details Elements
+    const bankNameInput = document.getElementById('bank-name');
+    const accountHolderInput = document.getElementById('account-holder');
+    const accountNumberInput = document.getElementById('account-number');
+    const branchCodeInput = document.getElementById('branch-code');
 
     const saveBusinessInfoButton = document.getElementById('save-business-info');
 
@@ -52,6 +58,7 @@
      */
     function showMessageBox(message, isConfirm = false) {
         messageText.textContent = message;
+        messageText.classList.add('whitespace-pre-wrap'); // Add for better multi-line display
         messageCancelButton.classList.add('hidden');
         messageOkButton.textContent = 'OK';
 
@@ -70,6 +77,7 @@
                 messageBox.style.visibility = 'hidden';
                 // Explicitly add 'hidden' class to ensure complete hiding
                 messageBox.classList.add('hidden');
+                messageText.classList.remove('whitespace-pre-wrap'); // Clean up style
                 messageOkButton.removeEventListener('click', okHandler);
                 messageCancelButton.removeEventListener('click', cancelHandler);
                 resolve(true);
@@ -81,6 +89,7 @@
                 messageBox.style.visibility = 'hidden';
                 // Explicitly add 'hidden' class to ensure complete hiding
                 messageBox.classList.add('hidden');
+                messageText.classList.remove('whitespace-pre-wrap'); // Clean up style
                 messageOkButton.removeEventListener('click', okHandler);
                 messageCancelButton.removeEventListener('click', cancelHandler);
                 resolve(false);
@@ -124,7 +133,14 @@
                 businessEmailInput.value = businessSettings.businessEmail || '';
                 businessRegNoInput.value = businessSettings.businessRegNo || '';
                 taxNumberInput.value = businessSettings.taxNumber || '';
-                cashierNameInput.value = businessSettings.cashierName || '';
+                technicianNameInput.value = businessSettings.technicianName || ''; // Changed from cashierName
+
+                // Load bank account details
+                bankNameInput.value = businessSettings.bankName || '';
+                accountHolderInput.value = businessSettings.accountHolder || '';
+                accountNumberInput.value = businessSettings.accountNumber || '';
+                branchCodeInput.value = businessSettings.branchCode || '';
+
                 // Load and display logo
                 businessLogoPreview.src = businessSettings.businessLogo || 'https://placehold.co/100x50/e0f2fe/000000?text=No+Logo';
             } else {
@@ -138,7 +154,12 @@
                     businessEmail: '',
                     businessRegNo: '',
                     taxNumber: '',
-                    cashierName: 'Cashier',
+                    technicianName: 'Technician', // Changed default from 'Cashier'
+                    // New default bank account details
+                    bankName: '',
+                    accountHolder: '',
+                    accountNumber: '',
+                    branchCode: '',
                     businessLogo: '' // Default empty logo
                 };
             }
@@ -321,7 +342,14 @@
             businessSettings.businessEmail = businessEmailInput.value.trim();
             businessSettings.businessRegNo = businessRegNoInput.value.trim();
             businessSettings.taxNumber = taxNumberInput.value.trim();
-            businessSettings.cashierName = cashierNameInput.value.trim();
+            businessSettings.technicianName = technicianNameInput.value.trim(); // Changed from cashierName
+
+            // New: Save bank account details
+            businessSettings.bankName = bankNameInput.value.trim();
+            businessSettings.accountHolder = accountHolderInput.value.trim();
+            businessSettings.accountNumber = accountNumberInput.value.trim();
+            businessSettings.branchCode = branchCodeInput.value.trim();
+
             // Save the current logo data
             businessSettings.businessLogo = businessLogoPreview.src.startsWith('data:image') ? businessLogoPreview.src : '';
 

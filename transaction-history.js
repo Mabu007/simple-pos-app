@@ -113,7 +113,11 @@
                     businessEmail: '',   // Default empty
                     businessRegNo: '', // Default empty
                     taxNumber: '',   // Default empty
-                    cashierName: 'Cashier', // Default value
+                    technicianName: 'Technician', // Default value, changed from cashierName
+                    bankName: '',
+                    accountHolder: '',
+                    accountNumber: '',
+                    branchCode: '',
                     businessLogo: '' // Default empty logo
                 };
             }
@@ -141,8 +145,6 @@
         let currentY = startY;
         const leftMargin = 10;
         const rightSideX = 200; // X position for right-aligned text
-        const logoColumnWidth = 50; // Max width for logo
-        const infoColumnWidth = 100; // Max width for info block
 
         const drawInfo = (offsetY = 0) => {
             doc.setFontSize(14);
@@ -205,7 +207,7 @@
         const businessName = businessSettings.businessName || 'Your Business';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const cashierName = businessSettings.cashierName || 'N/A';
+        const technicianName = businessSettings.technicianName || 'N/A'; // Changed from cashierName
 
         let yPos = 20; // Starting Y position for text
 
@@ -221,7 +223,7 @@
             doc.setFontSize(10);
             doc.text(`Transaction ID: ${transaction.id}`, 10, yPos);
             doc.text(`Date: ${new Date(transaction.timestamp).toLocaleString()}`, 10, yPos + 5);
-            doc.text(`Cashier: ${cashierName}`, 10, yPos + 10);
+            doc.text(`Technician: ${technicianName}`, 10, yPos + 10); // Changed label to Technician
             yPos += 20;
 
             // Items Table Header
@@ -298,13 +300,13 @@
         const businessName = businessSettings.businessName || 'Your Business';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const cashierName = businessSettings.cashierName || 'N/A';
+        const technicianName = businessSettings.technicianName || 'N/A'; // Using technicianName
 
 
         let yPos = 20;
         let pageNumber = 1;
 
-        const drawPageContent = () => {
+        const addPageHeader = () => {
             // Draw header on each new page
             drawHeaderWithLogoAndInfo(doc, 20, (updatedYPos) => {
                 yPos = updatedYPos + 5; // Buffer after header
@@ -319,71 +321,71 @@
                 doc.setFontSize(12);
                 doc.text('Transaction ID', 10, yPos);
                 doc.text('Date', 70, yPos);
+                doc.text('Technician', 130, yPos); // Display Technician in report
                 doc.text('Total', 200, yPos, { align: 'right' });
                 yPos += 5;
                 doc.line(10, yPos, 200, yPos);
                 yPos += 5;
                 console.log(`Added header for page ${pageNumber}.`); // Debug log
-
-                let totalRevenue = 0;
-                let totalTaxCollected = 0;
-                let transactionsPerPage = 0;
-                const maxTransactionsPerPage = 30; // Estimate, adjust based on content density
-
-                transactions.forEach((transaction, index) => {
-                    // Check if new page is needed before drawing the next transaction
-                    // Assuming content takes about 7 units of yPos per transaction
-                    if (yPos + 7 > (doc.internal.pageSize.height - 30) && index !== 0) { // Check if space is left before summary
-                        doc.addPage();
-                        yPos = 20; // Reset Y position for new page
-                        pageNumber++;
-                        transactionsPerPage = 0;
-                        drawPageContent(); // Recursively call to draw new page header and content
-                        return; // Skip current iteration to allow new page header to draw
-                    }
-
-                    doc.setFontSize(10);
-                    const displayDate = new Date(transaction.timestamp).toLocaleDateString();
-                    doc.text(transaction.id, 10, yPos);
-                    doc.text(displayDate, 70, yPos);
-                    doc.text(`${currencySymbol}${transaction.total.toFixed(2)}`, 200, yPos, { align: 'right' });
-                    yPos += 7;
-                    transactionsPerPage++;
-
-                    totalRevenue += transaction.total;
-                    totalTaxCollected += transaction.tax;
-                    console.log(`Added transaction ${transaction.id} to PDF. Current Y: ${yPos}`); // Debug log
-                });
-
-                // Summary at the end
-                if (yPos + 40 > doc.internal.pageSize.height) { // If not enough space for summary, add new page
-                    doc.addPage();
-                    yPos = 20;
-                    pageNumber++;
-                    console.log("Added new page for summary."); // Debug log
-                    drawHeaderWithLogoAndInfo(doc, yPos, (updatedYPos) => { yPos = updatedYPos + 5; }); // Redraw header for summary page
-                }
-
-                doc.line(10, yPos, 200, yPos);
-                yPos += 10;
-                doc.setFontSize(14);
-                doc.text(`Total Revenue: ${currencySymbol}${totalRevenue.toFixed(2)}`, 10, yPos);
-                yPos += 7;
-                doc.text(`Total Tax Collected: ${currencySymbol}${totalTaxCollected.toFixed(2)}`, 10, yPos);
-                yPos += 15;
-
-                doc.setFontSize(10);
-                doc.text(`End of Report - Page ${pageNumber}`, 105, yPos, { align: 'center' });
-
-
-                const filename = `Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
-                doc.save(filename);
-                showMessageBox(`Consolidated Sales Report "${filename}" downloaded!`);
-                console.log(`Consolidated Sales Report "${filename}" downloaded successfully.`); // Debug log
             });
         };
 
-        drawPageContent(); // Initial call to start the PDF generation flow
+        addPageHeader(); // Initial header for the first page
+
+        let totalRevenue = 0;
+        let totalTaxCollected = 0;
+        const lineSpacing = 7; // Estimated vertical space for each transaction row
+        const footerHeight = 40; // Estimated height for summary and footer on the last page
+
+        // Sort transactions by timestamp in ascending order for the report
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+
+        sortedTransactions.forEach((transaction, index) => {
+            // Check if new page is needed for the next transaction item
+            if (yPos + lineSpacing > (doc.internal.pageSize.height - footerHeight)) {
+                doc.addPage();
+                pageNumber++;
+                yPos = 20; // Reset Y position for new page
+                addPageHeader(); // Draw header for the new page
+            }
+
+            doc.setFontSize(10);
+            const displayDate = new Date(transaction.timestamp).toLocaleDateString();
+            doc.text(transaction.id, 10, yPos);
+            doc.text(displayDate, 70, yPos);
+            doc.text(transaction.technician || 'N/A', 130, yPos); // Display technician for this transaction
+            doc.text(`${currencySymbol}${transaction.total.toFixed(2)}`, 200, yPos, { align: 'right' });
+            yPos += lineSpacing;
+
+            totalRevenue += transaction.total;
+            totalTaxCollected += transaction.tax;
+        });
+
+        // Final Summary (always on a new page if not enough space)
+        if (yPos + footerHeight > doc.internal.pageSize.height) {
+            doc.addPage();
+            yPos = 20;
+            pageNumber++;
+            addPageHeader(); // Re-add header for the new summary page
+        }
+
+        doc.line(10, yPos, 200, yPos);
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.text(`Total Revenue: ${currencySymbol}${totalRevenue.toFixed(2)}`, 10, yPos);
+        yPos += 7;
+        doc.text(`Total Tax Collected: ${currencySymbol}${totalTaxCollected.toFixed(2)}`, 10, yPos);
+        yPos += 15;
+
+        doc.setFontSize(10);
+        doc.text(`End of Report - Page ${pageNumber}`, 105, yPos, { align: 'center' });
+
+
+        const filename = `Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+        doc.save(filename);
+        showMessageBox(`Consolidated Sales Report "${filename}" downloaded!`);
+        console.log(`Consolidated Sales Report "${filename}" downloaded successfully.`); // Debug log
     }
 
 
@@ -413,8 +415,14 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const cashierName = businessSettings.cashierName || 'N/A'; // For invoice generated from transaction, usually not displayed on invoice itself
+        const technicianName = businessSettings.technicianName || 'N/A'; // Using technicianName from settings
         const businessLogo = businessSettings.businessLogo || '';
+
+        // Bank Account Details for PDF
+        const bankName = businessSettings.bankName || 'N/A';
+        const accountHolder = businessSettings.accountHolder || 'N/A';
+        const accountNumber = businessSettings.accountNumber || 'N/A';
+        const branchCode = businessSettings.branchCode || 'N/A';
 
         let yPos = 20;
 
@@ -485,8 +493,27 @@
 
             // Notes/Payment Terms
             doc.setFontSize(10);
+            doc.text(`Technician: ${technicianName}`, 10, yPos); // Display technician name
+            yPos += 5;
             doc.text('Payment Terms: Due upon receipt.', 10, yPos);
             yPos += 10;
+            
+            // New: Bank Account Details on Invoice
+            if (bankName !== 'N/A' && accountNumber !== 'N/A') {
+                doc.setFontSize(9);
+                doc.text('Bank Details:', 10, yPos);
+                yPos += 5;
+                doc.text(`Bank: ${bankName}`, 10, yPos);
+                yPos += 5;
+                doc.text(`Account Holder: ${accountHolder}`, 10, yPos);
+                yPos += 5;
+                doc.text(`Account No: ${accountNumber}`, 10, yPos);
+                yPos += 5;
+                doc.text(`Branch Code: ${branchCode}`, 10, yPos);
+                yPos += 10;
+            }
+
+            doc.setFontSize(10);
             doc.text('Thank you for your business!', 105, yPos, { align: 'center' });
 
             const filename = `invoice_${invoiceNumber}.pdf`;
@@ -560,49 +587,41 @@
                         <button data-id="${transaction.id}" class="delete-transaction-btn bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg text-sm shadow transition duration-300">
                             Delete
                         </button>
+                        <button data-id="${transaction.id}" class="export-invoice-from-history-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm shadow transition duration-300">
+                            Export Invoice
+                        </button>
                     </div>
                 `;
                 transactionsListContainer.appendChild(transactionItem);
-                console.log(`Added transaction item for ID: ${transaction.id}`); // Debug log
             });
 
-            // Attach event listeners
-            document.querySelectorAll('.export-receipt-btn').forEach(button => {
+            // Add event listeners for new buttons
+            document.querySelectorAll('.view-details-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const transactionId = event.currentTarget.dataset.id;
-                    console.log(`Export Receipt button clicked for ID: ${transactionId}`); // Debug log
-                    const transactionToExport = transactions.find(t => t.id === transactionId);
-                    if (transactionToExport) {
-                        generateSalePdf(transactionToExport);
-                    } else {
-                        showMessageBox("Transaction not found for PDF export.");
+                    const transaction = transactions.find(t => t.id === transactionId);
+                    if (transaction) {
+                        let details = `Transaction ID: ${transaction.id}\n`;
+                        details += `Date: ${new Date(transaction.timestamp).toLocaleString()}\n`;
+                        details += `Technician: ${transaction.technician || 'N/A'}\n`; // Display technician
+                        details += `\nItems:\n`;
+                        transaction.items.forEach(item => {
+                            details += `- ${item.name} (x${item.quantity}): ${businessSettings.currencySymbol}${(item.price * item.quantity).toFixed(2)}\n`;
+                        });
+                        details += `\nSubtotal: ${businessSettings.currencySymbol}${transaction.subtotal.toFixed(2)}\n`;
+                        details += `Tax: ${businessSettings.currencySymbol}${transaction.tax.toFixed(2)}\n`;
+                        details += `Total: ${businessSettings.currencySymbol}${transaction.total.toFixed(2)}`;
+                        showMessageBox(details);
                     }
                 });
             });
 
-            // Removed generate-invoice-btn listener as per request
-            // document.querySelectorAll('.generate-invoice-btn').forEach(button => { /* ... */ });
-
-            document.querySelectorAll('.view-details-btn').forEach(button => {
+            document.querySelectorAll('.export-receipt-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const transactionId = event.currentTarget.dataset.id;
-                    console.log(`View Details button clicked for ID: ${transactionId}`); // Debug log
-                    const transactionDetails = transactions.find(t => t.id === transactionId);
-                    if (transactionDetails) {
-                        let detailsMessage = `Transaction ID: ${transactionDetails.id}\nDate: ${new Date(transactionDetails.timestamp).toLocaleString()}\n`;
-                        if (businessSettings.cashierName) {
-                            detailsMessage += `Cashier: ${businessSettings.cashierName}\n`;
-                        }
-                        detailsMessage += `\nItems:\n`;
-                        transactionDetails.items.forEach(item => {
-                            detailsMessage += `- ${item.name} (x${item.quantity}) - ${businessSettings.currencySymbol}${(item.price * item.quantity).toFixed(2)}\n`;
-                        });
-                        detailsMessage += `\nSubtotal: ${businessSettings.currencySymbol}${transactionDetails.subtotal.toFixed(2)}`;
-                        detailsMessage += `\nTax (${businessSettings.taxRate}%): ${businessSettings.currencySymbol}${transactionDetails.tax.toFixed(2)}`;
-                        detailsMessage += `\nTotal: ${businessSettings.currencySymbol}${transactionDetails.total.toFixed(2)}`;
-                        showMessageBox(detailsMessage);
-                    } else {
-                        showMessageBox("Transaction details not found.");
+                    const transaction = transactions.find(t => t.id === transactionId);
+                    if (transaction) {
+                        generateSalePdf(transaction);
                     }
                 });
             });
@@ -610,27 +629,36 @@
             document.querySelectorAll('.delete-transaction-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const transactionId = event.currentTarget.dataset.id;
-                    console.log(`Delete button clicked for ID: ${transactionId}`); // Debug log
                     deleteTransaction(transactionId);
+                });
+            });
+
+            document.querySelectorAll('.export-invoice-from-history-btn').forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const transactionId = event.currentTarget.dataset.id;
+                    const transaction = transactions.find(t => t.id === transactionId);
+                    if (transaction) {
+                        const customerName = await showMessageBox("Enter Customer Name for Invoice (optional):", true, true);
+                        if (customerName !== null) { // User clicked OK or entered text
+                            generateInvoicePdf(transaction, customerName === true ? 'Valued Customer' : customerName); // If true, it means OK with empty input
+                        } else {
+                            showMessageBox("Invoice generation cancelled.");
+                        }
+                    }
                 });
             });
         }
     }
 
     // --- Event Listeners ---
-    console.log("Attaching event listener to Export All Sales button."); // Debug log
     exportAllSalesPdfButton.addEventListener('click', generateAllSalesPdf);
 
-
     // --- Initialization ---
-    console.log("Transaction History page initialization started."); // Debug log
     loadData();
     renderTransactions();
-
-    // Initialize the message box styles
+    // Initialize the message box styles (important for all pages using it)
     messageBox.style.opacity = '0';
     messageBox.style.pointerEvents = 'none';
     messageBox.style.visibility = 'hidden';
     messageBox.classList.add('hidden'); // Ensure it starts hidden
-    console.log("Transaction History page initialization completed."); // Debug log
 })();

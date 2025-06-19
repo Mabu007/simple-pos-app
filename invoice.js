@@ -6,7 +6,7 @@
     const customerNameInput = document.getElementById('customer-name');
     const customerAddressInput = document.getElementById('customer-address');
     const customerEmailInput = document.getElementById('customer-email');
-    const accountNumberInput = document.getElementById('account-number'); // New: Account Number Input
+    const accountNumberInput = document.getElementById('account-number'); // Account Number Input for customer
     const invoiceDateInput = document.getElementById('invoice-date');
     const dueDateInput = document.getElementById('due-date');
 
@@ -67,6 +67,7 @@
 
         return new Promise((resolve) => {
             const okHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -77,6 +78,7 @@
                 resolve(true);
             };
             const cancelHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -116,12 +118,16 @@
                     businessName: 'My Small Business POS',
                     taxRate: 10,
                     currencySymbol: '$',
-                    businessAddress: '',
-                    businessPhone: '',
-                    businessEmail: '',
-                    businessRegNo: '',
-                    taxNumber: '',
-                    technicianName: 'Technician', // Updated default name
+                    businessAddress: '', // Default empty
+                    businessPhone: '',   // Default empty
+                    businessEmail: '',   // Default empty
+                    businessRegNo: '', // Default empty
+                    taxNumber: '',   // Default empty
+                    technicianName: 'Technician', // Default value
+                    bankName: '', // Default empty
+                    accountHolder: '', // Default empty
+                    accountNumber: '', // Default empty
+                    branchCode: '', // Default empty
                     businessLogo: '' // Default empty logo
                 };
             }
@@ -374,30 +380,40 @@
 
         let currentY = startY;
         const leftMargin = 10;
-        const rightMargin = 200; // jsPDF max X is typically 210 (A4 width)
+        const rightSideX = 200; // X position for right-aligned text
 
         const drawInfo = (offsetY = 0) => {
             doc.setFontSize(14);
-            doc.text(businessName, rightMargin, currentY + offsetY, { align: 'right' });
+            doc.text(businessName, rightSideX, currentY + offsetY, { align: 'right' });
             doc.setFontSize(9);
-            doc.text(businessAddress, rightMargin, currentY + offsetY + 5, { align: 'right' });
-            doc.text(`Phone: ${businessPhone}`, rightMargin, currentY + offsetY + 10, { align: 'right' });
-            doc.text(`Email: ${businessEmail}`, rightMargin, currentY + offsetY + 15, { align: 'right' });
-            doc.text(`Reg. No: ${businessRegNo}`, rightMargin, currentY + offsetY + 20, { align: 'right' });
-            doc.text(`Tax No: ${taxNumber}`, rightMargin, currentY + offsetY + 25, { align: 'right' });
+            doc.text(businessAddress, rightSideX, currentY + offsetY + 5, { align: 'right' });
+            doc.text(`Phone: ${businessPhone}`, rightSideX, currentY + offsetY + 10, { align: 'right' });
+            doc.text(`Email: ${businessEmail}`, rightSideX, currentY + offsetY + 15, { align: 'right' });
+            doc.text(`Reg. No: ${businessRegNo}`, rightSideX, currentY + offsetY + 20, { align: 'right' });
+            doc.text(`Tax No: ${taxNumber}`, rightSideX, currentY + offsetY + 25, { align: 'right' });
         };
 
         if (businessLogo) {
             const img = new Image();
             img.src = businessLogo;
             img.onload = () => {
-                const imgWidth = 40; // Max width for logo
+                const imgWidth = 40; // Desired width for logo
                 const imgHeight = (img.height * imgWidth) / img.width;
-                const logoX = leftMargin + (40 - imgWidth) / 2; // Center logo in a 40 width column
-                doc.addImage(img, 'PNG', logoX, currentY, imgWidth, imgHeight);
+                const logoX = leftMargin; // Logo aligned to left margin
+                const logoY = currentY;
+
+                // Ensure logo fits within column
+                let displayImgWidth = imgWidth;
+                let displayImgHeight = imgHeight;
+                if (displayImgHeight > 40) { // Limit logo height to avoid pushing content too far
+                    displayImgHeight = 40;
+                    displayImgWidth = (img.width * displayImgHeight) / img.height;
+                }
+
+                doc.addImage(img, 'PNG', logoX, logoY, displayImgWidth, displayImgHeight);
 
                 drawInfo(0); // Draw info at the initial Y
-                currentY += Math.max(imgHeight, 35); // Adjust Y based on whichever is taller (logo height or info block height)
+                currentY += Math.max(displayImgHeight, 35); // Adjust Y based on whichever is taller (logo height or info block height)
                 callback(currentY); // Pass updated Y position
             };
             img.onerror = () => {
@@ -440,8 +456,14 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A'; // Changed from cashierName
+        const technicianName = businessSettings.technicianName || 'N/A';
         const businessLogo = businessSettings.businessLogo || '';
+
+        // Bank Account Details for PDF
+        const bankName = businessSettings.bankName || '';
+        const accountHolder = businessSettings.accountHolder || '';
+        const businessAccountNumber = businessSettings.accountNumber || ''; // Use a different var name to avoid conflict with customer account number
+        const branchCode = businessSettings.branchCode || '';
 
         let yPos = 20;
 
@@ -471,14 +493,14 @@
             doc.text(customerNameInput.value.trim() || 'Valued Customer', 10, yPos + 5);
             if (customerAddressInput.value.trim()) doc.text(customerAddressInput.value.trim(), 10, yPos + 10);
             if (customerEmailInput.value.trim()) doc.text(customerEmailInput.value.trim(), 10, yPos + 15);
-            
-            // New: Account Number
+
+            // Customer Account Number
             const customerAccountNumber = accountNumberInput.value.trim();
             if (customerAccountNumber) {
                 doc.text(`Account No: ${customerAccountNumber}`, 10, yPos + 20);
-                yPos += (customerAddressInput.value.trim() && customerEmailInput.value.trim()) ? 30 : (customerAddressInput.value.trim() || customerEmailInput.value.trim()) ? 25 : 20;
+                yPos += 25; // Add extra space if account number is present
             } else {
-                yPos += (customerAddressInput.value.trim() && customerEmailInput.value.trim()) ? 25 : (customerAddressInput.value.trim() || customerEmailInput.value.trim()) ? 20 : 15;
+                yPos += 20; // Default spacing if no account number
             }
 
 
@@ -526,10 +548,27 @@
 
             // Notes/Payment Terms
             doc.setFontSize(10);
-            doc.text(`Technician: ${technicianName}`, 10, yPos); // Changed label to Technician
+            doc.text(`Technician: ${technicianName}`, 10, yPos); // Display technician name
             yPos += 5;
             doc.text('Payment Terms: Due upon receipt.', 10, yPos);
             yPos += 10;
+
+            // New: Bank Account Details on Invoice
+            if (bankName && businessAccountNumber) { // Only display if both are present
+                doc.setFontSize(9);
+                doc.text('Bank Details:', 10, yPos);
+                yPos += 5;
+                if (bankName) doc.text(`Bank: ${bankName}`, 10, yPos);
+                yPos += 5;
+                if (accountHolder) doc.text(`Account Holder: ${accountHolder}`, 10, yPos);
+                yPos += 5;
+                if (businessAccountNumber) doc.text(`Account No: ${businessAccountNumber}`, 10, yPos);
+                yPos += 5;
+                if (branchCode) doc.text(`Branch Code: ${branchCode}`, 10, yPos);
+                yPos += 10;
+            }
+
+            doc.setFontSize(10);
             doc.text('Thank you for your business!', 105, yPos, { align: 'center' });
 
             const filename = `invoice_${invoiceNumber}.pdf`;

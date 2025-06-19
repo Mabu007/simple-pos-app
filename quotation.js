@@ -67,6 +67,7 @@
 
         return new Promise((resolve) => {
             const okHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -77,6 +78,7 @@
                 resolve(true);
             };
             const cancelHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -116,12 +118,16 @@
                     businessName: 'My Small Business POS',
                     taxRate: 10,
                     currencySymbol: '$',
-                    businessAddress: '',
-                    businessPhone: '',
-                    businessEmail: '',
-                    businessRegNo: '',
-                    taxNumber: '',
-                    technicianName: 'Technician', // Using technicianName from settings
+                    businessAddress: '', // Default empty
+                    businessPhone: '',   // Default empty
+                    businessEmail: '',   // Default empty
+                    businessRegNo: '', // Default empty
+                    taxNumber: '',   // Default empty
+                    technicianName: 'Technician', // Default value
+                    bankName: '', // Default empty
+                    accountHolder: '', // Default empty
+                    accountNumber: '', // Default empty
+                    branchCode: '', // Default empty
                     businessLogo: '' // Default empty logo
                 };
             }
@@ -366,30 +372,40 @@
 
         let currentY = startY;
         const leftMargin = 10;
-        const rightMargin = 200; // jsPDF max X is typically 210 (A4 width)
+        const rightSideX = 200; // X position for right-aligned text
 
         const drawInfo = (offsetY = 0) => {
             doc.setFontSize(14);
-            doc.text(businessName, rightMargin, currentY + offsetY, { align: 'right' });
+            doc.text(businessName, rightSideX, currentY + offsetY, { align: 'right' });
             doc.setFontSize(9);
-            doc.text(businessAddress, rightMargin, currentY + offsetY + 5, { align: 'right' });
-            doc.text(`Phone: ${businessPhone}`, rightMargin, currentY + offsetY + 10, { align: 'right' });
-            doc.text(`Email: ${businessEmail}`, rightMargin, currentY + offsetY + 15, { align: 'right' });
-            doc.text(`Reg. No: ${businessRegNo}`, rightMargin, currentY + offsetY + 20, { align: 'right' });
-            doc.text(`Tax No: ${taxNumber}`, rightMargin, currentY + offsetY + 25, { align: 'right' });
+            doc.text(businessAddress, rightSideX, currentY + offsetY + 5, { align: 'right' });
+            doc.text(`Phone: ${businessPhone}`, rightSideX, currentY + offsetY + 10, { align: 'right' });
+            doc.text(`Email: ${businessEmail}`, rightSideX, currentY + offsetY + 15, { align: 'right' });
+            doc.text(`Reg. No: ${businessRegNo}`, rightSideX, currentY + offsetY + 20, { align: 'right' });
+            doc.text(`Tax No: ${taxNumber}`, rightSideX, currentY + offsetY + 25, { align: 'right' });
         };
 
         if (businessLogo) {
             const img = new Image();
             img.src = businessLogo;
             img.onload = () => {
-                const imgWidth = 40; // Max width for logo
+                const imgWidth = 40; // Desired width for logo
                 const imgHeight = (img.height * imgWidth) / img.width;
-                const logoX = leftMargin + (40 - imgWidth) / 2; // Center logo in a 40 width column
-                doc.addImage(img, 'PNG', logoX, currentY, imgWidth, imgHeight);
+                const logoX = leftMargin; // Logo aligned to left margin
+                const logoY = currentY;
+
+                // Ensure logo fits within column
+                let displayImgWidth = imgWidth;
+                let displayImgHeight = imgHeight;
+                if (displayImgHeight > 40) { // Limit logo height to avoid pushing content too far
+                    displayImgHeight = 40;
+                    displayImgWidth = (img.width * displayImgHeight) / img.height;
+                }
+
+                doc.addImage(img, 'PNG', logoX, logoY, displayImgWidth, displayImgHeight);
 
                 drawInfo(0); // Draw info at the initial Y
-                currentY += Math.max(imgHeight, 35); // Adjust Y based on whichever is taller (logo height or info block height)
+                currentY += Math.max(displayImgHeight, 35); // Adjust Y based on whichever is taller (logo height or info block height)
                 callback(currentY); // Pass updated Y position
             };
             img.onerror = () => {
@@ -432,7 +448,13 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A'; // Using technicianName from settings
+        const technicianName = businessSettings.technicianName || 'N/A';
+
+        // Bank Account Details for PDF
+        const bankName = businessSettings.bankName || '';
+        const accountHolder = businessSettings.accountHolder || '';
+        const businessAccountNumber = businessSettings.accountNumber || '';
+        const branchCode = businessSettings.branchCode || '';
 
         let yPos = 20;
 
@@ -455,7 +477,7 @@
             doc.text(`Expiry Date: ${expiryDate}`, 150, yPos + 10, { align: 'left' });
             yPos += 15;
 
-            // Bill To
+            // Quoted To
             doc.setFontSize(12);
             doc.text('Quoted To:', 10, yPos);
             doc.setFontSize(10);
@@ -511,8 +533,25 @@
             doc.setFontSize(10);
             doc.text(`Prepared by: ${technicianName}`, 10, yPos); // Changed label to Technician
             yPos += 5;
-            doc.text(`Validity: This quotation is valid for ${new Date(expiryDate).toLocaleDateString()} from the quotation date.`, 10, yPos);
+            doc.text(`Validity: This quotation is valid for ${expiryDate} from the quotation date.`, 10, yPos);
             yPos += 10;
+
+            // New: Bank Account Details on Quotation
+            if (bankName && businessAccountNumber) { // Only display if both are present
+                doc.setFontSize(9);
+                doc.text('Bank Details:', 10, yPos);
+                yPos += 5;
+                if (bankName) doc.text(`Bank: ${bankName}`, 10, yPos);
+                yPos += 5;
+                if (accountHolder) doc.text(`Account Holder: ${accountHolder}`, 10, yPos);
+                yPos += 5;
+                if (businessAccountNumber) doc.text(`Account No: ${businessAccountNumber}`, 10, yPos);
+                yPos += 5;
+                if (branchCode) doc.text(`Branch Code: ${branchCode}`, 10, yPos);
+                yPos += 10;
+            }
+
+            doc.setFontSize(10);
             doc.text('Thank you for your inquiry!', 105, yPos, { align: 'center' });
 
             const filename = `quotation_${quotationNumber}.pdf`;
