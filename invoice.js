@@ -456,7 +456,7 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A';
+        // const technicianName = businessSettings.technicianName || 'N/A'; // Removed: Technician name
         const businessLogo = businessSettings.businessLogo || '';
 
         // Bank Account Details from settings
@@ -546,8 +546,12 @@
             doc.text(`${currencySymbol}${totalValue.toFixed(2)}`, 200, yPos, { align: 'right' });
             yPos += 15;
 
-            // Notes/Payment Terms
-          
+            // Removed: Notes/Payment Terms and Technician field
+            // doc.setFontSize(10);
+            // doc.text(`Technician: ${technicianName}`, 10, yPos);
+            // yPos += 5;
+            // doc.text('Payment Terms: Due upon receipt.', 10, yPos);
+            // yPos += 10;
 
             // New: Bank Account Details on Invoice (only display if relevant info is present)
             if (bankName && businessAccountNumber) {
