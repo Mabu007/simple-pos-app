@@ -459,10 +459,10 @@
         const technicianName = businessSettings.technicianName || 'N/A';
         const businessLogo = businessSettings.businessLogo || '';
 
-        // Bank Account Details for PDF
+        // Bank Account Details from settings
         const bankName = businessSettings.bankName || '';
         const accountHolder = businessSettings.accountHolder || '';
-        const businessAccountNumber = businessSettings.accountNumber || ''; // Use a different var name to avoid conflict with customer account number
+        const businessAccountNumber = businessSettings.accountNumber || '';
         const branchCode = businessSettings.branchCode || '';
 
         let yPos = 20;
@@ -553,8 +553,8 @@
             doc.text('Payment Terms: Due upon receipt.', 10, yPos);
             yPos += 10;
 
-            // New: Bank Account Details on Invoice
-            if (bankName && businessAccountNumber) { // Only display if both are present
+            // New: Bank Account Details on Invoice (only display if relevant info is present)
+            if (bankName && businessAccountNumber) {
                 doc.setFontSize(9);
                 doc.text('Bank Details:', 10, yPos);
                 yPos += 5;
