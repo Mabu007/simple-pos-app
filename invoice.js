@@ -547,11 +547,7 @@
             yPos += 15;
 
             // Notes/Payment Terms
-            doc.setFontSize(10);
-            doc.text(`Technician: ${technicianName}`, 10, yPos); // Display technician name
-            yPos += 5;
-            doc.text('Payment Terms: Due upon receipt.', 10, yPos);
-            yPos += 10;
+          
 
             // New: Bank Account Details on Invoice (only display if relevant info is present)
             if (bankName && businessAccountNumber) {
