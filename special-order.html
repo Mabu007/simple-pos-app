@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Order</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        .message-box {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+        }
+        /* Custom scrollbar for order items */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* gray-300 */
+            border-radius: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* gray-400 */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Header/Navigation -->
+    <header class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Special Order</h1>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><a href="index.html" class="hover:text-blue-200 transition duration-300">POS</a></li>
+                    <li><a href="settings.html" class="hover:text-blue-200 transition duration-300">Settings</a></li>
+                    <li><a href="transaction-history.html" class="hover:text-blue-200 transition duration-300">History</a></li>
+                    <li><a href="invoice.html" class="hover:text-blue-200 transition duration-300">Invoice</a></li>
+                    <li><a href="quotation.html" class="hover:text-blue-200 transition duration-300">Quotation</a></li>
+                    <li><a href="special-order.html" class="hover:text-blue-200 transition duration-300">Special Order</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Special Order Details Section -->
+        <section class="bg-white p-6 rounded-lg shadow-lg order-1 lg:order-1">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Special Order Details</h2>
+
+            <!-- Document Type Selection -->
+            <div class="mb-6 p-4 border border-blue-100 rounded-lg bg-blue-50 shadow-inner">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">Document Type</h3>
+                <div class="flex items-center space-x-6">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="document-type" value="invoice" id="doc-type-invoice" class="form-radio text-blue-600 h-5 w-5" checked>
+                        <span class="ml-2 text-gray-700 font-medium">Special Invoice</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="document-type" value="quotation" id="doc-type-quotation" class="form-radio text-blue-600 h-5 w-5">
+                        <span class="ml-2 text-gray-700 font-medium">Special Quotation</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Customer Details -->
+                <h3 class="text-xl font-semibold text-gray-700 mt-6 pb-2 border-b border-gray-200">Customer Details</h3>
+                <div>
+                    <label for="customer-name" class="block text-sm font-medium text-gray-700">Customer Name</label>
+                    <input type="text" id="customer-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., John Smith">
+                </div>
+                <div>
+                    <label for="customer-address" class="block text-sm font-medium text-gray-700">Customer Address</label>
+                    <input type="text" id="customer-address" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 456 Oak Ave, Town">
+                </div>
+                <div>
+                    <label for="customer-email" class="block text-sm font-medium text-gray-700">Customer Email</label>
+                    <input type="email" id="customer-email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., customer@example.com">
+                </div>
+                <div id="account-number-field" class="hidden">
+                    <label for="customer-account-number" class="block text-sm font-medium text-gray-700">Customer Account Number</label>
+                    <input type="text" id="customer-account-number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., ACC001">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="document-date" id="document-date-label" class="block text-sm font-medium text-gray-700">Invoice Date</label>
+                        <input type="date" id="document-date" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="due-expiry-date" id="due-expiry-date-label" class="block text-sm font-medium text-gray-700">Due Date</label>
+                        <input type="date" id="due-expiry-date" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Order & Equipment Details -->
+                <h3 class="text-xl font-semibold text-gray-700 mt-6 pb-2 border-b border-gray-200">Order & Equipment Details</h3>
+                <div>
+                    <label for="special-order-id" class="block text-sm font-medium text-gray-700">Special Order ID</label>
+                    <input type="text" id="special-order-id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., SO-2024-001">
+                </div>
+                <div>
+                    <label for="customer-po-number" class="block text-sm font-medium text-gray-700">Customer PO Number</label>
+                    <input type="text" id="customer-po-number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., PO12345">
+                </div>
+                <div>
+                    <label for="battery-dhe-number" class="block text-sm font-medium text-gray-700">Battery DHE Number</label>
+                    <input type="text" id="battery-dhe-number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., BATT-XYZ-987">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="equipment-make" class="block text-sm font-medium text-gray-700">Equipment Make</label>
+                        <input type="text" id="equipment-make" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Caterpillar">
+                    </div>
+                    <div>
+                        <label for="equipment-model" class="block text-sm font-medium text-gray-700">Equipment Model</label>
+                        <input type="text" id="equipment-model" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 980M Wheel Loader">
+                    </div>
+                </div>
+                <div>
+                    <label for="equipment-serial-number" class="block text-sm font-medium text-gray-700">Equipment Serial Number</label>
+                    <input type="text" id="equipment-serial-number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., CAT00012345">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="equipment-hours-mileage" class="block text-sm font-medium text-gray-700">Equipment Hours/Mileage</label>
+                        <input type="text" id="equipment-hours-mileage" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 5000 Hours or 150,000 km">
+                    </div>
+                    <div>
+                        <label for="engine-type" class="block text-sm font-medium text-gray-700">Engine Type</label>
+                        <input type="text" id="engine-type" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Diesel, Electric">
+                    </div>
+                </div>
+                <div>
+                    <label for="work-done-description" class="block text-sm font-medium text-gray-700">Work Done Description</label>
+                    <textarea id="work-done-description" rows="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Detailed description of work performed or services rendered."></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Parts/Items Section -->
+        <section class="bg-white p-6 rounded-lg shadow-lg order-2 lg:order-2 flex flex-col">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Add Parts/Items</h2>
+
+            <!-- Add Custom Item (for special orders, most items are custom or direct entry) -->
+            <div class="mb-6 p-4 border border-yellow-100 rounded-lg bg-yellow-50 shadow-inner">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">Add Custom Part/Item</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label for="custom-item-name" class="block text-sm font-medium text-gray-700">Item Name</label>
+                        <input type="text" id="custom-item-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-yellow-500 focus:border-yellow-500" placeholder="e.g., Special Bearing">
+                    </div>
+                    <div>
+                        <label for="custom-item-price" class="block text-sm font-medium text-gray-700">Unit Price</label>
+                        <input type="number" step="0.01" id="custom-item-price" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-yellow-500 focus:border-yellow-500" placeholder="e.g., 1250.00">
+                    </div>
+                    <div>
+                        <label for="custom-item-qty" class="block text-sm font-medium text-gray-700">Quantity</label>
+                        <input type="number" id="custom-item-qty" value="1" min="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                </div>
+                <button id="add-custom-item" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 transform hover:scale-105">
+                    Add Custom Item
+                </button>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6 pb-2 border-b border-gray-200">Order Items</h3>
+            <div id="order-items-container" class="space-y-3 flex-grow overflow-y-auto pr-2 max-h-96">
+                <!-- Order items will be dynamically listed here -->
+                <p id="empty-order-message" class="text-center text-gray-500">No items added to this order yet.</p>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="mt-6 pt-4 border-t-2 border-blue-200">
+                <div class="flex justify-between items-center text-lg font-medium text-gray-700">
+                    <span>Subtotal:</span>
+                    <span id="order-subtotal" class="font-bold">$0.00</span>
+                </div>
+                <div class="flex justify-between items-center text-lg font-medium text-gray-700 mt-1">
+                    <span>Tax (<span id="order-tax-rate-display">10</span>%):</span>
+                    <span id="order-tax" class="font-bold">$0.00</span>
+                </div>
+                <div class="flex justify-between items-center text-2xl font-bold text-gray-900 mt-3">
+                    <span>Total:</span>
+                    <span id="order-total">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-6 flex flex-col sm:flex-row gap-4">
+                <button id="generate-pdf" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105" disabled>
+                    Generate Document PDF
+                </button>
+                <button id="clear-order" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105">
+                    Clear Order
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Custom Message Box for alerts/confirms -->
+    <div id="message-box" class="message-box-overlay hidden">
+        <div class="message-box">
+            <p id="message-text" class="text-gray-800 text-lg mb-6"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="message-ok-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">OK</button>
+                <button id="message-cancel-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300 hidden">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for special order functionality -->
+    <script src="special-order.js"></script>
+</body>
+</html>
