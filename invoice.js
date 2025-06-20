@@ -456,7 +456,6 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        // const technicianName = businessSettings.technicianName || 'N/A'; // Removed: Technician name
         const businessLogo = businessSettings.businessLogo || '';
 
         // Bank Account Details from settings
@@ -475,16 +474,15 @@
             doc.text('INVOICE', 105, yPos, { align: 'center' });
             yPos += 15;
 
-            // Invoice Details
+            // Invoice Details (Date and Due Date)
             doc.setFontSize(10);
-            const invoiceNumber = `INV-${Date.now()}`; // Generate a new invoice number for this specific invoice
+            // Removed: invoiceNumber line
             const invoiceDate = invoiceDateInput.value ? new Date(invoiceDateInput.value).toLocaleDateString() : new Date().toLocaleDateString();
             const dueDate = dueDateInput.value ? new Date(dueDateInput.value).toLocaleDateString() : new Date(new Date().setDate(new Date().getDate() + 7)).toLocaleDateString();
 
-            doc.text(`Invoice #: ${invoiceNumber}`, 150, yPos, { align: 'left' });
-            doc.text(`Invoice Date: ${invoiceDate}`, 150, yPos + 5, { align: 'left' });
-            doc.text(`Due Date: ${dueDate}`, 150, yPos + 10, { align: 'left' });
-            yPos += 15;
+            doc.text(`Invoice Date: ${invoiceDate}`, 150, yPos, { align: 'left' });
+            doc.text(`Due Date: ${dueDate}`, 150, yPos + 5, { align: 'left' });
+            yPos += 10; // Adjusted yPos increment
 
             // Bill To
             doc.setFontSize(12);
@@ -546,13 +544,6 @@
             doc.text(`${currencySymbol}${totalValue.toFixed(2)}`, 200, yPos, { align: 'right' });
             yPos += 15;
 
-            // Removed: Notes/Payment Terms and Technician field
-            // doc.setFontSize(10);
-            // doc.text(`Technician: ${technicianName}`, 10, yPos);
-            // yPos += 5;
-            // doc.text('Payment Terms: Due upon receipt.', 10, yPos);
-            // yPos += 10;
-
             // New: Bank Account Details on Invoice (only display if relevant info is present)
             if (bankName && businessAccountNumber) {
                 doc.setFontSize(9);
@@ -571,7 +562,9 @@
             doc.setFontSize(10);
             doc.text('Thank you for your business!', 105, yPos, { align: 'center' });
 
-            const filename = `invoice_${invoiceNumber}.pdf`;
+            // Generate invoice number after all content is laid out, so it can be used for filename
+            const finalInvoiceNumber = `INV-${Date.now()}`;
+            const filename = `invoice_${finalInvoiceNumber}.pdf`;
             doc.save(filename);
             showMessageBox(`Invoice "${filename}" downloaded!`);
         });
