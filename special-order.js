@@ -479,10 +479,10 @@
             let col1X = leftMargin;
             let col2X = leftMargin + colWidth + 10; // 10 units space between columns
 
-            doc.text(`Order ID: ${specialOrderIdInput.value.trim() || 'N/A'}`, col1X, yPos);
+            doc.text(`Order No: ${specialOrderIdInput.value.trim() || 'N/A'}`, col1X, yPos);
             doc.text(`Model: ${equipmentModelInput.value.trim() || 'N/A'}`, col2X, yPos);
             yPos += 5;
-            doc.text(`Customer PO Number: ${customerPoNumberInput.value.trim() || 'N/A'}`, col1X, yPos);
+            doc.text(`Customer: ${customerPoNumberInput.value.trim() || 'N/A'}`, col1X, yPos);
             doc.text(`Serial No: ${equipmentSerialNumberInput.value.trim() || 'N/A'}`, col2X, yPos);
             yPos += 5;
             doc.text(`Battery DHE Number: ${batteryDheNumberInput.value.trim() || 'N/A'}`, col1X, yPos);
