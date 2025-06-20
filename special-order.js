@@ -486,7 +486,7 @@
             doc.text(`Serial No: ${equipmentSerialNumberInput.value.trim() || 'N/A'}`, col2X, yPos);
             yPos += 5;
             doc.text(`Battery DHE Number: ${batteryDheNumberInput.value.trim() || 'N/A'}`, col1X, yPos);
-            doc.text(`Hours/Mileage: ${equipmentHoursMileageInput.value.trim() || 'N/A'}`, col2X, yPos);
+            doc.text(`Hours: ${equipmentHoursMileageInput.value.trim() || 'N/A'}`, col2X, yPos);
             yPos += 5;
             doc.text(`Make: ${equipmentMakeInput.value.trim() || 'N/A'}`, col1X, yPos);
             doc.text(`Engine Type: ${engineTypeInput.value.trim() || 'N/A'}`, col2X, yPos);

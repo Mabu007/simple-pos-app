@@ -1,19 +1,22 @@
-// script.js - Main logic for the POS system
+// main.js - Core logic for the POS system
 
 (function() {
     // --- DOM Element References ---
-    const productDisplay = document.getElementById('product-display');
-    const cartItemsContainer = document.getElementById('cart-items-container');
-    const emptyCartMessage = document.getElementById('empty-cart-message');
-    const noProductsAvailable = document.getElementById('no-products-available');
+    // Products Section
+    const productSearchInput = document.getElementById('product-search');
+    const productGrid = document.getElementById('product-grid');
+    // Note: addProductBtn is not used in this specific file but is mentioned in the original settings.html
+    // const addProductBtn = document.getElementById('add-product-btn'); // For navigating to product management
 
-    const cartSubtotalSpan = document.getElementById('cart-subtotal');
-    const cartTaxSpan = document.getElementById('cart-tax');
-    const cartTaxRateDisplay = document.getElementById('cart-tax-rate-display');
-    const cartTotalSpan = document.getElementById('cart-total');
-
-    const processSaleButton = document.getElementById('process-sale');
-    const clearCartButton = document.getElementById('clear-cart');
+    // Current Sale Section
+    const currentSaleItemsContainer = document.getElementById('cart-items-container'); // Corrected ID from 'current-sale-items-container'
+    const emptySaleMessage = document.getElementById('empty-cart-message'); // Corrected ID from 'empty-sale-message'
+    const subtotalSpan = document.getElementById('subtotal');
+    const taxSpan = document.getElementById('tax');
+    const taxRateDisplay = document.getElementById('tax-rate-display');
+    const totalSpan = document.getElementById('total');
+    const completeSaleButton = document.getElementById('complete-sale-btn'); // Corrected ID from 'process-sale'
+    const clearSaleButton = document.getElementById('clear-sale-btn'); // Corrected ID from 'clear-cart'
 
     // Message box elements
     const messageBox = document.getElementById('message-box');
@@ -22,9 +25,10 @@
     const messageCancelButton = document.getElementById('message-cancel-button');
 
     // --- Data Storage ---
-    let products = []; // Loaded from localStorage
-    let businessSettings = {}; // Loaded from localStorage
-    let cart = []; // Items currently in the cart
+    let products = []; // Array of product objects (from localStorage)
+    let currentSale = []; // Array of items currently in the cart
+    let businessSettings = {}; // Business settings (from localStorage)
+    let transactions = []; // Array of past transactions (from localStorage)
 
     // --- Helper Functions ---
 
@@ -47,6 +51,7 @@
 
         return new Promise((resolve) => {
             const okHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -57,6 +62,7 @@
                 resolve(true);
             };
             const cancelHandler = () => {
+                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
@@ -75,86 +81,127 @@
     }
 
     /**
-     * loadData - Loads products and business settings from localStorage.
+     * loadData - Loads products, business settings, and transactions from localStorage.
+     * Also sets up default settings if none exist.
      */
     function loadData() {
         try {
             const savedProducts = localStorage.getItem('posProducts');
             const savedSettings = localStorage.getItem('posBusinessSettings');
+            const savedTransactions = localStorage.getItem('posTransactions');
 
-            if (savedProducts) {
-                products = JSON.parse(savedProducts);
-            } else {
-                products = []; // No products configured
-            }
+            products = savedProducts ? JSON.parse(savedProducts) : [];
 
             if (savedSettings) {
                 businessSettings = JSON.parse(savedSettings);
+                // Ensure invoiceCounter and quotationCounter exist for new pages if not already there
+                if (typeof businessSettings.invoiceCounter === 'undefined') {
+                    businessSettings.invoiceCounter = 1;
+                }
+                if (typeof businessSettings.quotationCounter === 'undefined') {
+                    businessSettings.quotationCounter = 1;
+                }
             } else {
                 // Default settings if not found
                 businessSettings = {
                     businessName: 'My Small Business POS',
-                    taxRate: 10,
-                    currencySymbol: '$',
+                    taxRate: 15, // Default tax rate
+                    currencySymbol: 'R', // Default currency to Rands
                     businessAddress: '',
                     businessPhone: '',
                     businessEmail: '',
                     businessRegNo: '',
                     taxNumber: '',
-                    technicianName: 'Technician', // Default value, changed from cashierName
-                    businessLogo: ''
+                    technicianName: '', // This will remain empty string as technician field is removed from sale object
+                    bankName: '',
+                    accountHolder: '',
+                    accountNumber: '',
+                    branchCode: '',
+                    businessLogo: '',
+                    invoiceCounter: 1, // Initialize invoice counter
+                    quotationCounter: 1 // Initialize quotation counter
                 };
             }
+            // Save settings back to ensure counters are persisted if they were just initialized
+            localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
+
+
+            transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+
+            // If no products exist, initialize some dummy data for demonstration
+            if (products.length === 0) {
+                products = [
+                    { id: 'prod1', name: 'Laptop Pro', price: 15000.00, stock: 10, image: 'https://placehold.co/100x100/cccccc/000000?text=Laptop' },
+                    { id: 'prod2', name: 'Wireless Mouse', price: 250.00, stock: 50, image: 'https://placehold.co/100x100/cccccc/000000?text=Mouse' },
+                    { id: 'prod3', name: 'Mechanical Keyboard', price: 1200.00, stock: 20, image: 'https://placehold.co/100x100/cccccc/000000?text=Keyboard' },
+                    { id: 'prod4', name: 'USB-C Hub', price: 400.00, stock: 35, image: 'https://placehold.co/100x100/cccccc/000000?text=Hub' },
+                    { id: 'prod5', name: 'External SSD 1TB', price: 1800.00, stock: 15, image: 'https://placehold.co/100x100/cccccc/000000?text=SSD' }
+                ];
+                localStorage.setItem('posProducts', JSON.stringify(products));
+            }
+
         } catch (e) {
             console.error("Error loading data from localStorage:", e);
-            showMessageBox("Could not load product data or business settings. Please check your browser storage.");
+            showMessageBox("Could not load application data. Some features may not work correctly.");
         }
     }
 
     /**
-     * renderProducts - Displays product cards in the product display area.
+     * renderProducts - Displays products in the product grid, filtered by search input.
      */
     function renderProducts() {
-        productDisplay.innerHTML = '';
-        if (products.length === 0) {
-            noProductsAvailable.classList.remove('hidden');
+        productGrid.innerHTML = '';
+        const searchTerm = productSearchInput.value.toLowerCase();
+        const filteredProducts = products.filter(product =>
+            product.name.toLowerCase().includes(searchTerm) ||
+            product.id.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredProducts.length === 0) {
+            // Display message if no products are found after filtering or initially
+            const noProductsMessage = document.getElementById('no-products-available');
+            if (noProductsMessage) {
+                noProductsMessage.classList.remove('hidden');
+                noProductsMessage.textContent = searchTerm ? `No products found matching "${searchTerm}".` : 'No products configured. Go to Settings to add some.';
+            } else {
+                 // Fallback if no-products-available element is not found
+                productGrid.innerHTML = `<p class="text-gray-600 text-center col-span-full">No products found.</p>`;
+            }
         } else {
-            noProductsAvailable.classList.add('hidden');
-            products.forEach(product => {
+            // Hide the 'no products' message if products are found
+            const noProductsMessage = document.getElementById('no-products-available');
+            if (noProductsMessage) {
+                noProductsMessage.classList.add('hidden');
+            }
+
+            filteredProducts.forEach(product => {
                 const productCard = document.createElement('div');
-                productCard.className = 'bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center text-center transition duration-300 hover:shadow-md hover:scale-105';
-                const imageUrl = product.image && product.image.startsWith('data:image') ? product.image : 'https://placehold.co/100x100/e0f2fe/000000?text=Product';
+                productCard.className = 'bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center';
+                productCard.dataset.productId = product.id; // Store product ID for easy access
+
+                // Placeholder image if image is not a valid base64 or URL
+                const imageUrl = product.image && product.image.startsWith('data:image') ? product.image : 'https://placehold.co/100x100/cccccc/000000?text=Product';
 
                 productCard.innerHTML = `
-                    <img src="${imageUrl}" alt="${product.name}" class="w-20 h-20 object-contain rounded-md mb-2 border border-gray-200">
+                    <img src="${imageUrl}" alt="${product.name}" class="w-24 h-24 object-contain rounded-md mb-2 border border-gray-100">
                     <h3 class="font-semibold text-gray-800 text-lg mb-1">${product.name}</h3>
-                    <p class="text-gray-600 text-sm">Stock: ${product.stock}</p>
-                    <p class="font-bold text-blue-600 text-xl mt-2">${businessSettings.currencySymbol}${product.price.toFixed(2)}</p>
-                    <button data-id="${product.id}" class="add-to-cart-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg mt-3 shadow transition duration-300 w-full ${product.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${product.stock === 0 ? 'disabled' : ''}>
-                        Add to Cart
-                    </button>
+                    <p class="text-gray-700 text-base mb-1">${businessSettings.currencySymbol}${product.price.toFixed(2)}</p>
+                    <p class="text-sm ${product.stock <= 5 ? 'text-red-500 font-medium' : 'text-gray-500'}">Stock: ${product.stock}</p>
                 `;
-                productDisplay.appendChild(productCard);
-            });
-
-            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const productId = event.currentTarget.dataset.id;
-                    addToCart(productId);
-                });
+                productCard.addEventListener('click', () => addProductToSale(product.id));
+                productGrid.appendChild(productCard);
             });
         }
     }
 
     /**
-     * addToCart - Adds a product to the shopping cart.
+     * addProductToSale - Adds a product to the current sale.
      * @param {string} productId - The ID of the product to add.
      */
-    function addToCart(productId) {
+    function addProductToSale(productId) {
         const product = products.find(p => p.id === productId);
-
         if (!product) {
-            showMessageBox("Product not found.");
+            showMessageBox('Product not found.');
             return;
         }
 
@@ -163,196 +210,226 @@
             return;
         }
 
-        // Check if item already exists in cart
-        const existingCartItem = cart.find(item => item.id === productId);
-
-        if (existingCartItem) {
-            existingCartItem.quantity++;
+        const existingItem = currentSale.find(item => item.id === productId);
+        if (existingItem) {
+            existingItem.quantity++;
         } else {
-            cart.push({
+            currentSale.push({
                 id: product.id,
                 name: product.name,
                 price: product.price,
-                quantity: 1,
-                image: product.image
+                quantity: 1
             });
         }
-
-        product.stock--; // Decrease stock
+        product.stock--; // Decrement stock for the available product
         localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
-        renderProducts(); // Re-render products to update stock display
-        renderCart();
-        showMessageBox(`Added ${product.name} to cart.`);
+        renderSaleItems();
+        renderProducts(); // Re-render products to show updated stock
     }
 
     /**
-     * removeFromCart - Removes a product from the shopping cart.
+     * updateSaleItemQuantity - Updates the quantity of an item in the current sale.
+     * @param {string} productId - The ID of the product in the sale.
+     * @param {number} change - The amount to change the quantity by (+1 or -1).
+     */
+    function updateSaleItemQuantity(productId, change) {
+        const saleItem = currentSale.find(item => item.id === productId);
+        const productInInventory = products.find(p => p.id === productId);
+
+        if (!saleItem || !productInInventory) {
+            console.error('Sale item or product not found.');
+            return;
+        }
+
+        if (change > 0) { // Increase quantity
+            if (productInInventory.stock <= 0) {
+                showMessageBox(`Cannot add more "${saleItem.name}". Out of stock.`);
+                return;
+            }
+            saleItem.quantity++;
+            productInInventory.stock--;
+        } else if (change < 0) { // Decrease quantity
+            if (saleItem.quantity > 1) {
+                saleItem.quantity--;
+                productInInventory.stock++;
+            } else {
+                // If quantity becomes 0, remove item from sale
+                removeSaleItem(productId);
+                productInInventory.stock++; // Restore stock for the last item removed (since it's being fully removed from cart)
+                return; // Exit as renderSaleItems will be called by removeSaleItem
+            }
+        }
+        localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
+        renderSaleItems();
+        renderProducts(); // Re-render products to show updated stock
+    }
+
+    /**
+     * removeSaleItem - Removes an item completely from the current sale.
      * @param {string} productId - The ID of the product to remove.
      */
-    function removeFromCart(productId) {
-        const cartItemIndex = cart.findIndex(item => item.id === productId);
-
-        if (cartItemIndex > -1) {
-            const cartItem = cart[cartItemIndex];
-            cartItem.quantity--;
-
-            // Find the original product to restore stock
-            const product = products.find(p => p.id === productId);
-            if (product) {
-                product.stock++; // Increase stock
-                localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
-                renderProducts(); // Re-render products to update stock display
+    async function removeSaleItem(productId) {
+        const confirmed = await showMessageBox("Are you sure you want to remove this item from the current sale?", true);
+        if (confirmed) {
+            const index = currentSale.findIndex(item => item.id === productId);
+            if (index > -1) {
+                const itemRemoved = currentSale.splice(index, 1)[0];
+                // Restore stock for the removed item
+                const productInInventory = products.find(p => p.id === itemRemoved.id);
+                if (productInInventory) {
+                    productInInventory.stock += itemRemoved.quantity;
+                    localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
+                    renderProducts(); // Re-render products to show updated stock
+                }
+                renderSaleItems();
+                showMessageBox("Item removed from sale.");
             }
-
-            if (cartItem.quantity <= 0) {
-                cart.splice(cartItemIndex, 1); // Remove item if quantity is 0 or less
-            }
-            renderCart();
-            showMessageBox(`Removed 1x ${cartItem.name} from cart.`);
         }
     }
 
     /**
-     * renderCart - Displays items in the shopping cart.
+     * renderSaleItems - Displays items currently in the cart and updates totals.
      */
-    function renderCart() {
-        cartItemsContainer.innerHTML = '';
-        if (cart.length === 0) {
-            emptyCartMessage.classList.remove('hidden');
-            processSaleButton.disabled = true;
-            processSaleButton.classList.add('opacity-50', 'cursor-not-allowed');
+    function renderSaleItems() {
+        currentSaleItemsContainer.innerHTML = '';
+        if (currentSale.length === 0) {
+            emptySaleMessage.classList.remove('hidden');
+            completeSaleButton.disabled = true;
+            clearSaleButton.disabled = true;
         } else {
-            emptyCartMessage.classList.add('hidden');
-            processSaleButton.disabled = false;
-            processSaleButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            emptySaleMessage.classList.add('hidden');
+            completeSaleButton.disabled = false;
+            clearSaleButton.disabled = false;
 
-            cart.forEach(item => {
-                const cartItemDiv = document.createElement('div');
-                cartItemDiv.className = 'flex items-center justify-between bg-white rounded-md p-3 mb-2 shadow-sm';
+            currentSale.forEach(item => {
+                const saleItemDiv = document.createElement('div');
+                saleItemDiv.className = 'flex items-center justify-between bg-white rounded-md p-3 mb-2 shadow-sm';
                 const itemTotal = item.price * item.quantity;
-                const imageUrl = item.image && item.image.startsWith('data:image') ? item.image : 'https://placehold.co/50x50/cccccc/000000?text=Item';
 
-                cartItemDiv.innerHTML = `
-                    <div class="flex items-center flex-grow">
-                        <img src="${imageUrl}" alt="${item.name}" class="w-10 h-10 object-contain rounded-md mr-3 border border-gray-100">
-                        <div>
-                            <h3 class="font-medium text-gray-800">${item.name}</h3>
-                            <p class="text-sm text-gray-600">Qty: ${item.quantity} x ${businessSettings.currencySymbol}${item.price.toFixed(2)}</p>
-                        </div>
+                saleItemDiv.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="font-medium text-gray-800">${item.name}</h3>
+                        <p class="text-sm text-gray-600">${businessSettings.currencySymbol}${item.price.toFixed(2)} x ${item.quantity}</p>
                     </div>
                     <div class="flex items-center">
-                        <span class="font-bold text-gray-900 mr-3">${businessSettings.currencySymbol}${itemTotal.toFixed(2)}</span>
-                        <button data-id="${item.id}" class="remove-from-cart-btn bg-red-400 hover:bg-red-500 text-white p-2 rounded-full text-sm leading-none flex items-center justify-center transition duration-300">
+                        <button data-id="${item.id}" data-change="-1" class="qty-change-btn bg-gray-200 hover:bg-gray-300 text-gray-800 p-1 rounded-l-md transition duration-300">-</button>
+                        <span class="px-3 font-semibold">${item.quantity}</span>
+                        <button data-id="${item.id}" data-change="+1" class="qty-change-btn bg-gray-200 hover:bg-gray-300 text-gray-800 p-1 rounded-r-md transition duration-300">+</button>
+                        <span class="font-bold text-gray-900 ml-4 mr-3">${businessSettings.currencySymbol}${itemTotal.toFixed(2)}</span>
+                        <button data-id="${item.id}" class="remove-sale-item-btn bg-red-400 hover:bg-red-500 text-white p-2 rounded-full text-sm leading-none flex items-center justify-center transition duration-300">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
                     </div>
                 `;
-                cartItemsContainer.appendChild(cartItemDiv);
+                currentSaleItemsContainer.appendChild(saleItemDiv);
             });
 
-            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+            // Add event listeners for quantity change buttons
+            document.querySelectorAll('.qty-change-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const productId = event.currentTarget.dataset.id;
-                    removeFromCart(productId);
+                    const change = parseInt(event.currentTarget.dataset.change);
+                    updateSaleItemQuantity(productId, change);
+                });
+            });
+
+            // Add event listeners for remove item buttons
+            document.querySelectorAll('.remove-sale-item-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.currentTarget.dataset.id;
+                    removeSaleItem(productId);
                 });
             });
         }
-        calculateCartTotals();
+        calculateTotals();
     }
 
     /**
-     * calculateCartTotals - Computes and displays the subtotal, tax, and total for the cart.
+     * calculateTotals - Calculates and displays the subtotal, tax, and total for the current sale.
      */
-    function calculateCartTotals() {
-        const taxRate = businessSettings.taxRate / 100;
-        cartTaxRateDisplay.textContent = businessSettings.taxRate;
+    function calculateTotals() {
+        const taxRate = businessSettings.taxRate / 100 || 0;
+        taxRateDisplay.textContent = businessSettings.taxRate || 0;
 
-        let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let subtotal = currentSale.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         let tax = subtotal * taxRate;
         let total = subtotal + tax;
 
-        cartSubtotalSpan.textContent = `${businessSettings.currencySymbol}${subtotal.toFixed(2)}`;
-        cartTaxSpan.textContent = `${businessSettings.currencySymbol}${tax.toFixed(2)}`;
-        cartTotalSpan.textContent = `${businessSettings.currencySymbol}${total.toFixed(2)}`;
+        subtotalSpan.textContent = `${businessSettings.currencySymbol}${subtotal.toFixed(2)}`;
+        taxSpan.textContent = `${businessSettings.currencySymbol}${tax.toFixed(2)}`;
+        totalSpan.textContent = `${businessSettings.currencySymbol}${total.toFixed(2)}`;
     }
 
     /**
-     * processSale - Finalizes the sale, saves to transaction history, and clears the cart.
+     * completeSale - Processes the current sale, records it, and clears the cart.
      */
-    async function processSale() {
-        if (cart.length === 0) {
-            showMessageBox("Your cart is empty. Please add products to process a sale.");
+    async function completeSale() {
+        if (currentSale.length === 0) {
+            showMessageBox("Current sale is empty. Please add items.");
             return;
         }
 
-        const confirmed = await showMessageBox("Confirm sale? This will be added to transaction history.", true);
+        const confirmed = await showMessageBox("Confirm sale completion?", true);
         if (confirmed) {
-            const transaction = {
-                id: `TXN-${Date.now()}`, // Unique transaction ID
-                timestamp: new Date().toISOString(),
-                items: [...cart], // Copy of cart items
-                subtotal: parseFloat(cartSubtotalSpan.textContent.replace(businessSettings.currencySymbol, '')),
-                tax: parseFloat(cartTaxSpan.textContent.replace(businessSettings.currencySymbol, '')),
-                total: parseFloat(cartTotalSpan.textContent.replace(businessSettings.currencySymbol, '')),
-                technician: businessSettings.technicianName || 'Technician' // Using technicianName
+            const sale = {
+                id: `SALE-${Date.now()}`,
+                date: new Date().toISOString(),
+                items: JSON.parse(JSON.stringify(currentSale)), // Deep copy items
+                subtotal: parseFloat(subtotalSpan.textContent.replace(businessSettings.currencySymbol, '')),
+                tax: parseFloat(taxSpan.textContent.replace(businessSettings.currencySymbol, '')),
+                total: parseFloat(totalSpan.textContent.replace(businessSettings.currencySymbol, '')),
+                currency: businessSettings.currencySymbol,
+                // Removed technician field as requested
+                // technician: businessSettings.technicianName || 'N/A'
             };
 
-            // Load existing transactions, add new one, and save
-            let transactions = [];
-            try {
-                const savedTransactions = localStorage.getItem('posTransactions');
-                if (savedTransactions) {
-                    transactions = JSON.parse(savedTransactions);
-                }
-            } catch (e) {
-                console.error("Error loading transactions:", e);
-            }
-
-            transactions.push(transaction);
+            transactions.push(sale);
             localStorage.setItem('posTransactions', JSON.stringify(transactions));
-
-            cart = []; // Clear the cart
-            renderCart();
-            showMessageBox("Sale processed successfully!");
-        } else {
-            showMessageBox("Sale cancelled.");
+            currentSale = []; // Clear the cart
+            renderSaleItems();
+            showMessageBox(`Sale ${sale.id} completed! Total: ${businessSettings.currencySymbol}${sale.total.toFixed(2)}`);
         }
     }
 
     /**
-     * clearCart - Clears all items from the shopping cart.
+     * clearSale - Clears all items from the current sale and restores product stock.
      */
-    async function clearCart() {
-        if (cart.length === 0) {
-            showMessageBox("Cart is already empty.");
+    async function clearSale() {
+        if (currentSale.length === 0) {
+            showMessageBox("Current sale is already empty.");
             return;
         }
-        const confirmed = await showMessageBox("Are you sure you want to clear the entire cart?", true);
+        const confirmed = await showMessageBox("Are you sure you want to clear the current sale? This will restore stock.", true);
         if (confirmed) {
-            // Restore stock for all items in the cart
-            cart.forEach(cartItem => {
-                const product = products.find(p => p.id === cartItem.id);
+            currentSale.forEach(saleItem => {
+                const product = products.find(p => p.id === saleItem.id);
                 if (product) {
-                    product.stock += cartItem.quantity;
+                    product.stock += saleItem.quantity; // Restore stock
                 }
             });
             localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
-
-            cart = [];
-            renderProducts(); // Re-render products to reflect restored stock
-            renderCart();
-            showMessageBox("Cart cleared.");
+            currentSale = [];
+            renderSaleItems();
+            renderProducts(); // Re-render product list to show restored stock
+            showMessageBox("Current sale cleared and stock restored.");
         }
     }
 
     // --- Event Listeners ---
-    processSaleButton.addEventListener('click', processSale);
-    clearCartButton.addEventListener('click', clearCart);
+    productSearchInput.addEventListener('input', renderProducts);
+    completeSaleButton.addEventListener('click', completeSale);
+    clearSaleButton.addEventListener('click', clearSale);
 
-    // --- Initialization ---
+    // Initial render
     loadData();
     renderProducts();
-    renderCart(); // Initial render of the empty cart
-})
+    renderSaleItems(); // Initialize sale area
+
+    // Initialize the message box styles (important for all pages using it)
+    messageBox.style.opacity = '0';
+    messageBox.style.pointerEvents = 'none';
+    messageBox.style.visibility = 'hidden';
+    messageBox.classList.add('hidden'); // Ensure it starts hidden
+})();
