@@ -6,7 +6,7 @@
     const customerNameInput = document.getElementById('customer-name');
     const customerAddressInput = document.getElementById('customer-address');
     const customerEmailInput = document.getElementById('customer-email');
-    const quotationNumberInput = document.getElementById('quotation-number'); // New: Quotation Number Input
+    const quotationNumberInput = document.getElementById('quotation-number'); // New: Quotation Number Input (will be overridden for PDF)
     const quotationDateInput = document.getElementById('quotation-date');
     const expiryDateInput = document.getElementById('expiry-date');
 
@@ -112,6 +112,12 @@
 
             if (savedSettings) {
                 businessSettings = JSON.parse(savedSettings);
+                // Initialize quotationCounter if it doesn't exist
+                if (typeof businessSettings.quotationCounter === 'undefined') {
+                    businessSettings.quotationCounter = 1;
+                    // Save immediately to ensure persistence of the new counter
+                    localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
+                }
             } else {
                 // Default settings if not found
                 businessSettings = {
@@ -128,8 +134,11 @@
                     accountHolder: '', // Default empty
                     accountNumber: '', // Default empty
                     branchCode: '', // Default empty
-                    businessLogo: '' // Default empty logo
+                    businessLogo: '', // Default empty logo
+                    quotationCounter: 1 // Initialize counter for quotations
                 };
+                // Save default settings including the new counter
+                localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
             }
         } catch (e) {
             console.error("Error loading data from localStorage:", e);
@@ -448,7 +457,7 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A';
+        // const technicianName = businessSettings.technicianName || 'N/A'; // Removed: Technician name
 
         // Bank Account Details for PDF
         const bankName = businessSettings.bankName || '';
@@ -466,16 +475,22 @@
             doc.text('QUOTATION', 105, yPos, { align: 'center' });
             yPos += 15;
 
-            // Quotation Details
+            // Quotation Details (Date and Expiry Date)
             doc.setFontSize(10);
-            const quotationNumber = quotationNumberInput.value.trim() || `QUOTE-${Date.now()}`;
             const quotationDate = quotationDateInput.value ? new Date(quotationDateInput.value).toLocaleDateString() : new Date().toLocaleDateString();
             const expiryDate = expiryDateInput.value ? new Date(expiryDateInput.value).toLocaleDateString() : new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString(); // Default 30 days expiry
 
-            doc.text(`Quotation #: ${quotationNumber}`, 150, yPos, { align: 'left' });
-            doc.text(`Quotation Date: ${quotationDate}`, 150, yPos + 5, { align: 'left' });
-            doc.text(`Expiry Date: ${expiryDate}`, 150, yPos + 10, { align: 'left' });
-            yPos += 15;
+            // Get and increment quotation counter
+            let currentQuotationNumber = businessSettings.quotationCounter;
+            const formattedQuotationNumber = `QUO-${currentQuotationNumber.toString().padStart(5, '0')}`; // e.g., QUO-00001
+            businessSettings.quotationCounter++; // Increment for next quotation
+            localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings)); // Save updated counter
+
+            // Removed: Quotation Number line. Will use for filename only.
+            doc.text(`Quotation Date: ${quotationDate}`, 150, yPos, { align: 'left' }); // Adjusted yPos
+            doc.text(`Expiry Date: ${expiryDate}`, 150, yPos + 5, { align: 'left' });
+            yPos += 10; // Adjusted yPos increment for these two lines
+
 
             // Quoted To
             doc.setFontSize(12);
@@ -529,12 +544,12 @@
             doc.text(`${currencySymbol}${totalValue.toFixed(2)}`, 200, yPos, { align: 'right' });
             yPos += 15;
 
-            // Notes/Validity Terms
-            doc.setFontSize(10);
-            doc.text(`Prepared by: ${technicianName}`, 10, yPos); // Changed label to Technician
-            yPos += 5;
-            doc.text(`Validity: This quotation is valid for ${expiryDate} from the quotation date.`, 10, yPos);
-            yPos += 10;
+            // Removed: Notes/Validity Terms
+            // doc.setFontSize(10);
+            // doc.text(`Prepared by: ${technicianName}`, 10, yPos);
+            // yPos += 5;
+            // doc.text(`Validity: This quotation is valid for ${expiryDate} from the quotation date.`, 10, yPos);
+            // yPos += 10;
 
             // New: Bank Account Details on Quotation
             if (bankName && businessAccountNumber) { // Only display if both are present
@@ -554,7 +569,7 @@
             doc.setFontSize(10);
             doc.text('Thank you for your inquiry!', 105, yPos, { align: 'center' });
 
-            const filename = `quotation_${quotationNumber}.pdf`;
+            const filename = `quotation_${formattedQuotationNumber}.pdf`;
             doc.save(filename);
             showMessageBox(`Quotation "${filename}" downloaded!`);
         });
