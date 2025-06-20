@@ -123,7 +123,7 @@
                 businessSettings = {
                     businessName: 'My Small Business POS',
                     taxRate: 10,
-                    currencySymbol: '$',
+                    currencySymbol: 'R',
                     businessAddress: '', // Default empty
                     businessPhone: '',   // Default empty
                     businessEmail: '',   // Default empty
@@ -134,8 +134,7 @@
                     accountHolder: '', // Default empty
                     accountNumber: '', // Default empty
                     branchCode: '', // Default empty
-                    businessLogo: '', // Default empty logo
-                    quotationCounter: 1 // Initialize counter for quotations
+                    businessLogo: '' // Default empty logo
                 };
                 // Save default settings including the new counter
                 localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
@@ -455,7 +454,7 @@
         const businessEmail = businessSettings.businessEmail || 'N/A';
         const businessRegNo = businessSettings.businessRegNo || 'N/A';
         const taxNumber = businessSettings.taxNumber || 'N/A';
-        const currencySymbol = businessSettings.currencySymbol || '$';
+        const currencySymbol = businessSettings.currencySymbol || 'R';
         const taxRate = businessSettings.taxRate || 0;
         // const technicianName = businessSettings.technicianName || 'N/A'; // Removed: Technician name
 
@@ -475,21 +474,21 @@
             doc.text('QUOTATION', 105, yPos, { align: 'center' });
             yPos += 15;
 
-            // Quotation Details (Date and Expiry Date)
+            // Quotation Details (Quotation No, Date, Expiry Date)
             doc.setFontSize(10);
             const quotationDate = quotationDateInput.value ? new Date(quotationDateInput.value).toLocaleDateString() : new Date().toLocaleDateString();
             const expiryDate = expiryDateInput.value ? new Date(expiryDateInput.value).toLocaleDateString() : new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString(); // Default 30 days expiry
 
             // Get and increment quotation counter
             let currentQuotationNumber = businessSettings.quotationCounter;
-            const formattedQuotationNumber = `QUO-${currentQuotationNumber.toString().padStart(5, '0')}`; // e.g., QUO-00001
+            const formattedQuotationNumber = `${currentQuotationNumber.toString().padStart(5, '0')}`; // e.g., QUO-00001
             businessSettings.quotationCounter++; // Increment for next quotation
             localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings)); // Save updated counter
 
-            // Removed: Quotation Number line. Will use for filename only.
-            doc.text(`Quotation Date: ${quotationDate}`, 150, yPos, { align: 'left' }); // Adjusted yPos
-            doc.text(`Expiry Date: ${expiryDate}`, 150, yPos + 5, { align: 'left' });
-            yPos += 10; // Adjusted yPos increment for these two lines
+            doc.text(`Quotation No: ${formattedQuotationNumber}`, 150, yPos, { align: 'left' });
+            doc.text(`Quotation Date: ${quotationDate}`, 150, yPos + 5, { align: 'left' });
+            doc.text(`Expiry Date: ${expiryDate}`, 150, yPos + 10, { align: 'left' });
+            yPos += 15; // Adjusted yPos increment for these three lines
 
 
             // Quoted To
@@ -544,13 +543,6 @@
             doc.text(`${currencySymbol}${totalValue.toFixed(2)}`, 200, yPos, { align: 'right' });
             yPos += 15;
 
-            // Removed: Notes/Validity Terms
-            // doc.setFontSize(10);
-            // doc.text(`Prepared by: ${technicianName}`, 10, yPos);
-            // yPos += 5;
-            // doc.text(`Validity: This quotation is valid for ${expiryDate} from the quotation date.`, 10, yPos);
-            // yPos += 10;
-
             // New: Bank Account Details on Quotation
             if (bankName && businessAccountNumber) { // Only display if both are present
                 doc.setFontSize(9);
@@ -598,3 +590,4 @@
     messageBox.style.visibility = 'hidden';
     messageBox.classList.add('hidden'); // Ensure it starts hidden
 })();
+// End of quotation.js
