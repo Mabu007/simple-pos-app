@@ -5,18 +5,20 @@
     // Products Section
     const productSearchInput = document.getElementById('product-search');
     const productGrid = document.getElementById('product-grid');
-    // Note: addProductBtn is not used in this specific file but is mentioned in the original settings.html
-    // const addProductBtn = document.getElementById('add-product-btn'); // For navigating to product management
+    const prevPageBtn = document.getElementById('prev-page-btn');
+    const nextPageBtn = document.getElementById('next-page-btn');
+    const pageInfoSpan = document.getElementById('page-info');
+    const noProductsAvailableMessage = document.getElementById('no-products-available');
 
     // Current Sale Section
-    const currentSaleItemsContainer = document.getElementById('cart-items-container'); // Corrected ID from 'current-sale-items-container'
-    const emptySaleMessage = document.getElementById('empty-cart-message'); // Corrected ID from 'empty-sale-message'
+    const currentSaleItemsContainer = document.getElementById('cart-items-container');
+    const emptySaleMessage = document.getElementById('empty-cart-message');
     const subtotalSpan = document.getElementById('subtotal');
     const taxSpan = document.getElementById('tax');
     const taxRateDisplay = document.getElementById('tax-rate-display');
     const totalSpan = document.getElementById('total');
-    const completeSaleButton = document.getElementById('complete-sale-btn'); // Corrected ID from 'process-sale'
-    const clearSaleButton = document.getElementById('clear-sale-btn'); // Corrected ID from 'clear-cart'
+    const completeSaleButton = document.getElementById('complete-sale-btn');
+    const clearSaleButton = document.getElementById('clear-sale-btn');
 
     // Message box elements
     const messageBox = document.getElementById('message-box');
@@ -30,6 +32,11 @@
     let businessSettings = {}; // Business settings (from localStorage)
     let transactions = []; // Array of past transactions (from localStorage)
 
+    // --- Pagination Variables ---
+    const productsPerPage = 4; // Number of products to display per page
+    let currentPage = 1;
+    let filteredProducts = []; // To store products after search filtering
+
     // --- Helper Functions ---
 
     /**
@@ -40,34 +47,32 @@
      */
     function showMessageBox(message, isConfirm = false) {
         messageText.textContent = message;
-        messageText.classList.add('whitespace-pre-wrap'); // Add for better multi-line display
+        messageText.classList.add('whitespace-pre-wrap');
         messageCancelButton.classList.add('hidden');
         messageOkButton.textContent = 'OK';
 
-        messageBox.classList.remove('hidden'); // Ensure it's not hidden by class
+        messageBox.classList.remove('hidden');
         messageBox.style.opacity = '1';
         messageBox.style.pointerEvents = 'auto';
         messageBox.style.visibility = 'visible';
 
         return new Promise((resolve) => {
             const okHandler = () => {
-                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
-                messageBox.classList.add('hidden'); // Ensure it's hidden by class
-                messageText.classList.remove('whitespace-pre-wrap'); // Clean up style
+                messageBox.classList.add('hidden');
+                messageText.classList.remove('whitespace-pre-wrap');
                 messageOkButton.removeEventListener('click', okHandler);
                 messageCancelButton.removeEventListener('click', cancelHandler);
                 resolve(true);
             };
             const cancelHandler = () => {
-                // Hide the message box
                 messageBox.style.opacity = '0';
                 messageBox.style.pointerEvents = 'none';
                 messageBox.style.visibility = 'hidden';
-                messageBox.classList.add('hidden'); // Ensure it's hidden by class
-                messageText.classList.remove('whitespace-pre-wrap'); // Clean up style
+                messageBox.classList.add('hidden');
+                messageText.classList.remove('whitespace-pre-wrap');
                 messageOkButton.removeEventListener('click', okHandler);
                 messageCancelButton.removeEventListener('click', cancelHandler);
                 resolve(false);
@@ -94,48 +99,57 @@
 
             if (savedSettings) {
                 businessSettings = JSON.parse(savedSettings);
-                // Ensure invoiceCounter and quotationCounter exist for new pages if not already there
+                // Ensure invoiceCounter, quotationCounter, and saleCounter exist
                 if (typeof businessSettings.invoiceCounter === 'undefined') {
                     businessSettings.invoiceCounter = 1;
                 }
                 if (typeof businessSettings.quotationCounter === 'undefined') {
                     businessSettings.quotationCounter = 1;
                 }
+                if (typeof businessSettings.saleCounter === 'undefined') { // Initialize saleCounter
+                    businessSettings.saleCounter = 1;
+                }
             } else {
-                // Default settings if not found
                 businessSettings = {
                     businessName: 'My Small Business POS',
-                    taxRate: 15, // Default tax rate
-                    currencySymbol: 'R', // Default currency to Rands
-                    businessAddress: '',
-                    businessPhone: '',
-                    businessEmail: '',
-                    businessRegNo: '',
-                    taxNumber: '',
-                    technicianName: '', // This will remain empty string as technician field is removed from sale object
-                    bankName: '',
-                    accountHolder: '',
-                    accountNumber: '',
-                    branchCode: '',
+                    taxRate: 15,
+                    currencySymbol: 'R',
+                    businessAddress: '123 Main Street, Anytown, 12345', // Illustrative default
+                    businessPhone: '+1 (555) 123-4567',   // Illustrative default
+                    businessEmail: 'info@mysmallbusiness.com',   // Illustrative default
+                    businessRegNo: 'REG12345', // Illustrative default
+                    taxNumber: 'TAX98765',   // Illustrative default
+                    bankName: 'Sample Bank',
+                    accountHolder: 'My Business Inc.',
+                    accountNumber: '123456789',
+                    branchCode: '987654',
                     businessLogo: '',
-                    invoiceCounter: 1, // Initialize invoice counter
-                    quotationCounter: 1 // Initialize quotation counter
+                    invoiceCounter: 1,
+                    quotationCounter: 1,
+                    saleCounter: 1 // Initialize sale counter here as well
                 };
             }
-            // Save settings back to ensure counters are persisted if they were just initialized
+            // Always save settings back to ensure any newly initialized properties are persisted
             localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
 
 
             transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
 
-            // If no products exist, initialize some dummy data for demonstration
             if (products.length === 0) {
+                // Initial dummy data, removed image property
                 products = [
-                    { id: 'prod1', name: 'Laptop Pro', price: 15000.00, stock: 10, image: 'https://placehold.co/100x100/cccccc/000000?text=Laptop' },
-                    { id: 'prod2', name: 'Wireless Mouse', price: 250.00, stock: 50, image: 'https://placehold.co/100x100/cccccc/000000?text=Mouse' },
-                    { id: 'prod3', name: 'Mechanical Keyboard', price: 1200.00, stock: 20, image: 'https://placehold.co/100x100/cccccc/000000?text=Keyboard' },
-                    { id: 'prod4', name: 'USB-C Hub', price: 400.00, stock: 35, image: 'https://placehold.co/100x100/cccccc/000000?text=Hub' },
-                    { id: 'prod5', name: 'External SSD 1TB', price: 1800.00, stock: 15, image: 'https://placehold.co/100x100/cccccc/000000?text=SSD' }
+                    { id: 'prod1', name: 'Laptop Pro', price: 15000.00, stock: 10 },
+                    { id: 'prod2', name: 'Wireless Mouse', price: 250.00, stock: 50 },
+                    { id: 'prod3', name: 'Mechanical Keyboard', price: 1200.00, stock: 20 },
+                    { id: 'prod4', name: 'USB-C Hub', price: 400.00, stock: 35 },
+                    { id: 'prod5', name: 'External SSD 1TB', price: 1800.00, stock: 15 },
+                    { id: 'prod6', name: 'Gaming Monitor', price: 7500.00, stock: 8 },
+                    { id: 'prod7', name: 'Webcam 1080p', price: 600.00, stock: 25 },
+                    { id: 'prod8', name: 'Noise Cancelling Headphones', price: 2000.00, stock: 12 },
+                    { id: 'prod9', name: 'Portable Speaker', price: 900.00, stock: 30 },
+                    { id: 'prod10', name: 'Smartwatch', price: 3000.00, stock: 7 },
+                    { id: 'prod11', name: 'Smartphone', price: 10000.00, stock: 5 },
+                    { id: 'prod12', name: 'Tablet', price: 6000.00, stock: 10 }
                 ];
                 localStorage.setItem('posProducts', JSON.stringify(products));
             }
@@ -147,52 +161,87 @@
     }
 
     /**
-     * renderProducts - Displays products in the product grid, filtered by search input.
+     * renderProducts - Displays products in a list format with pagination and search filtering.
      */
     function renderProducts() {
-        productGrid.innerHTML = '';
+        productGrid.innerHTML = ''; // Clear existing products
         const searchTerm = productSearchInput.value.toLowerCase();
-        const filteredProducts = products.filter(product =>
+        
+        filteredProducts = products.filter(product =>
             product.name.toLowerCase().includes(searchTerm) ||
             product.id.toLowerCase().includes(searchTerm)
         );
 
+        const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+        // Ensure current page is valid after filtering
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        } else if (totalPages === 0) {
+            currentPage = 0; // No pages if no products
+        } else if (currentPage === 0 && totalPages > 0) {
+            currentPage = 1; // If somehow on page 0 but there are products, go to page 1
+        }
+        
+        // Hide/show "No products available" message
         if (filteredProducts.length === 0) {
-            // Display message if no products are found after filtering or initially
-            const noProductsMessage = document.getElementById('no-products-available');
-            if (noProductsMessage) {
-                noProductsMessage.classList.remove('hidden');
-                noProductsMessage.textContent = searchTerm ? `No products found matching "${searchTerm}".` : 'No products configured. Go to Settings to add some.';
-            } else {
-                 // Fallback if no-products-available element is not found
-                productGrid.innerHTML = `<p class="text-gray-600 text-center col-span-full">No products found.</p>`;
-            }
+            noProductsAvailableMessage.classList.remove('hidden');
+            noProductsAvailableMessage.textContent = searchTerm ? `No products found matching "${searchTerm}".` : 'No products configured. Go to Settings to add some.';
+            pageInfoSpan.textContent = 'Page 0 of 0';
+            prevPageBtn.disabled = true;
+            nextPageBtn.disabled = true;
         } else {
-            // Hide the 'no products' message if products are found
-            const noProductsMessage = document.getElementById('no-products-available');
-            if (noProductsMessage) {
-                noProductsMessage.classList.add('hidden');
-            }
+            noProductsAvailableMessage.classList.add('hidden');
+            
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const endIndex = startIndex + productsPerPage;
+            const productsToDisplay = filteredProducts.slice(startIndex, endIndex);
 
-            filteredProducts.forEach(product => {
+            productsToDisplay.forEach(product => {
                 const productCard = document.createElement('div');
-                productCard.className = 'bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center';
-                productCard.dataset.productId = product.id; // Store product ID for easy access
-
-                // Placeholder image if image is not a valid base64 or URL
-                const imageUrl = product.image && product.image.startsWith('data:image') ? product.image : 'https://placehold.co/100x100/cccccc/000000?text=Product';
+                // Updated class for smaller, minimal list item styling
+                productCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors duration-200 flex justify-between items-center text-sm';
+                productCard.dataset.productId = product.id; // Store product ID
 
                 productCard.innerHTML = `
-                    <img src="${imageUrl}" alt="${product.name}" class="w-24 h-24 object-contain rounded-md mb-2 border border-gray-100">
-                    <h3 class="font-semibold text-gray-800 text-lg mb-1">${product.name}</h3>
-                    <p class="text-gray-700 text-base mb-1">${businessSettings.currencySymbol}${product.price.toFixed(2)}</p>
-                    <p class="text-sm ${product.stock <= 5 ? 'text-red-500 font-medium' : 'text-gray-500'}">Stock: ${product.stock}</p>
+                    <div class="flex-grow text-left">
+                        <h3 class="font-medium text-gray-800">${product.name}</h3>
+                        <p class="text-gray-600">${businessSettings.currencySymbol}${product.price.toFixed(2)}</p>
+                    </div>
+                    <p class="font-semibold ${product.stock <= 5 && product.stock > 0 ? 'text-orange-500' : product.stock === 0 ? 'text-red-500' : 'text-gray-700'}">Stock: ${product.stock}</p>
                 `;
                 productCard.addEventListener('click', () => addProductToSale(product.id));
                 productGrid.appendChild(productCard);
             });
+
+            // Update pagination info and button states
+            pageInfoSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages;
         }
     }
+
+    /**
+     * nextPage - Moves to the next page of products.
+     */
+    function nextPage() {
+        const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderProducts();
+        }
+    }
+
+    /**
+     * prevPage - Moves to the previous page of products.
+     */
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderProducts();
+        }
+    }
+
 
     /**
      * addProductToSale - Adds a product to the current sale.
@@ -221,10 +270,10 @@
                 quantity: 1
             });
         }
-        product.stock--; // Decrement stock for the available product
-        localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
+        product.stock--;
+        localStorage.setItem('posProducts', JSON.stringify(products));
         renderSaleItems();
-        renderProducts(); // Re-render products to show updated stock
+        renderProducts();
     }
 
     /**
@@ -241,27 +290,26 @@
             return;
         }
 
-        if (change > 0) { // Increase quantity
+        if (change > 0) {
             if (productInInventory.stock <= 0) {
                 showMessageBox(`Cannot add more "${saleItem.name}". Out of stock.`);
                 return;
             }
             saleItem.quantity++;
             productInInventory.stock--;
-        } else if (change < 0) { // Decrease quantity
+        } else if (change < 0) {
             if (saleItem.quantity > 1) {
                 saleItem.quantity--;
                 productInInventory.stock++;
             } else {
-                // If quantity becomes 0, remove item from sale
                 removeSaleItem(productId);
-                productInInventory.stock++; // Restore stock for the last item removed (since it's being fully removed from cart)
-                return; // Exit as renderSaleItems will be called by removeSaleItem
+                productInInventory.stock++;
+                return;
             }
         }
-        localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
+        localStorage.setItem('posProducts', JSON.stringify(products));
         renderSaleItems();
-        renderProducts(); // Re-render products to show updated stock
+        renderProducts();
     }
 
     /**
@@ -274,12 +322,11 @@
             const index = currentSale.findIndex(item => item.id === productId);
             if (index > -1) {
                 const itemRemoved = currentSale.splice(index, 1)[0];
-                // Restore stock for the removed item
                 const productInInventory = products.find(p => p.id === itemRemoved.id);
                 if (productInInventory) {
                     productInInventory.stock += itemRemoved.quantity;
-                    localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
-                    renderProducts(); // Re-render products to show updated stock
+                    localStorage.setItem('posProducts', JSON.stringify(products));
+                    renderProducts();
                 }
                 renderSaleItems();
                 showMessageBox("Item removed from sale.");
@@ -326,7 +373,6 @@
                 currentSaleItemsContainer.appendChild(saleItemDiv);
             });
 
-            // Add event listeners for quantity change buttons
             document.querySelectorAll('.qty-change-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const productId = event.currentTarget.dataset.id;
@@ -335,7 +381,6 @@
                 });
             });
 
-            // Add event listeners for remove item buttons
             document.querySelectorAll('.remove-sale-item-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const productId = event.currentTarget.dataset.id;
@@ -373,21 +418,25 @@
 
         const confirmed = await showMessageBox("Confirm sale completion?", true);
         if (confirmed) {
+            // Generate sequential sale ID
+            const saleId = `SALE-${String(businessSettings.saleCounter).padStart(5, '0')}`;
+            businessSettings.saleCounter++; // Increment for next sale
+            localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings)); // Save updated counter
+
             const sale = {
-                id: `SALE-${Date.now()}`,
+                id: saleId,
                 date: new Date().toISOString(),
-                items: JSON.parse(JSON.stringify(currentSale)), // Deep copy items
+                timestamp: Date.now(),
+                items: JSON.parse(JSON.stringify(currentSale)),
                 subtotal: parseFloat(subtotalSpan.textContent.replace(businessSettings.currencySymbol, '')),
                 tax: parseFloat(taxSpan.textContent.replace(businessSettings.currencySymbol, '')),
                 total: parseFloat(totalSpan.textContent.replace(businessSettings.currencySymbol, '')),
                 currency: businessSettings.currencySymbol,
-                // Removed technician field as requested
-                // technician: businessSettings.technicianName || 'N/A'
             };
 
             transactions.push(sale);
             localStorage.setItem('posTransactions', JSON.stringify(transactions));
-            currentSale = []; // Clear the cart
+            currentSale = [];
             renderSaleItems();
             showMessageBox(`Sale ${sale.id} completed! Total: ${businessSettings.currencySymbol}${sale.total.toFixed(2)}`);
         }
@@ -406,30 +455,36 @@
             currentSale.forEach(saleItem => {
                 const product = products.find(p => p.id === saleItem.id);
                 if (product) {
-                    product.stock += saleItem.quantity; // Restore stock
+                    product.stock += saleItem.quantity;
                 }
             });
-            localStorage.setItem('posProducts', JSON.stringify(products)); // Save updated stock
+            localStorage.setItem('posProducts', JSON.stringify(products));
             currentSale = [];
             renderSaleItems();
-            renderProducts(); // Re-render product list to show restored stock
+            renderProducts();
             showMessageBox("Current sale cleared and stock restored.");
         }
     }
 
     // --- Event Listeners ---
-    productSearchInput.addEventListener('input', renderProducts);
+    productSearchInput.addEventListener('input', () => {
+        currentPage = 1;
+        renderProducts();
+    });
     completeSaleButton.addEventListener('click', completeSale);
     clearSaleButton.addEventListener('click', clearSale);
+    prevPageBtn.addEventListener('click', prevPage);
+    nextPageBtn.addEventListener('click', nextPage);
+
 
     // Initial render
     loadData();
     renderProducts();
-    renderSaleItems(); // Initialize sale area
+    renderSaleItems();
 
     // Initialize the message box styles (important for all pages using it)
     messageBox.style.opacity = '0';
     messageBox.style.pointerEvents = 'none';
     messageBox.style.visibility = 'hidden';
-    messageBox.classList.add('hidden'); // Ensure it starts hidden
+    messageBox.classList.add('hidden');
 })();

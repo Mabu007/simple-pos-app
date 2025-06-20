@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- jsPDF library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Capacitor JavaScript Bridge -->
+    <!-- Capacitor JavaScript Bridge (if needed, otherwise remove) -->
     <script type="module" src="capacitor.js"></script>
     <style>
         body {
@@ -41,7 +41,7 @@
             max-width: 90%;
             width: 400px;
         }
-        /* Custom scrollbar for product display and cart */
+        /* Custom scrollbar for cart items */
         .overflow-y-auto::-webkit-scrollbar {
             width: 8px;
         }
@@ -62,7 +62,7 @@
     <!-- Header/Navigation -->
     <header class="bg-blue-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Simple POS</h1>
+            <h1 class="text-2xl font-bold">Business Admin</h1>
             <nav>
                 <ul class="flex space-x-4">
                     <li><a href="index.html" class="hover:text-blue-200 transition duration-300">POS</a></li>
@@ -81,16 +81,32 @@
         <!-- Product Display Area -->
         <section class="bg-white p-6 rounded-lg shadow-lg order-2 md:order-1 flex flex-col">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Products</h2>
-            <div id="product-display" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-grow overflow-y-auto pr-2">
-                <!-- Product cards will be loaded here by JavaScript -->
+            <!-- Product Search Input -->
+            <div class="mb-4">
+                <input type="text" id="product-search" placeholder="Search products..."
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <!-- Product list - removed flex-grow and overflow-y-auto for SPA pagination -->
+            <div id="product-grid" class="space-y-2 pr-2">
+                <!-- Product list items will be loaded here by JavaScript -->
                 <p id="no-products-available" class="text-center text-gray-500 col-span-full hidden">No products configured. Go to Settings to add some.</p>
+            </div>
+            <!-- Pagination Controls -->
+            <div class="flex justify-center items-center mt-4 space-x-4">
+                <button id="prev-page-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Previous
+                </button>
+                <span id="page-info" class="text-gray-700 font-medium">Page 1 of 1</span>
+                <button id="next-page-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next
+                </button>
             </div>
         </section>
 
         <!-- Cart and Checkout Area -->
         <section class="bg-white p-6 rounded-lg shadow-lg order-1 md:order-2 flex flex-col">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4 pb-2 border-b-2 border-blue-200">Shopping Cart</h2>
-            <div id="cart-items-container" class="flex-grow overflow-y-auto pr-2">
+            <div id="cart-items-container" class="pr-2">
                 <!-- Cart items will be loaded here by JavaScript -->
                 <p id="empty-cart-message" class="text-center text-gray-500">Your cart is empty.</p>
             </div>
@@ -99,24 +115,24 @@
             <div class="mt-6 pt-4 border-t-2 border-blue-200">
                 <div class="flex justify-between items-center text-lg font-medium text-gray-700">
                     <span>Subtotal:</span>
-                    <span id="cart-subtotal" class="font-bold">$0.00</span>
+                    <span id="subtotal" class="font-bold">$0.00</span>
                 </div>
                 <div class="flex justify-between items-center text-lg font-medium text-gray-700 mt-1">
-                    <span>Tax (<span id="cart-tax-rate-display">10</span>%):</span>
-                    <span id="cart-tax" class="font-bold">$0.00</span>
+                    <span>Tax (<span id="tax-rate-display">10</span>%):</span>
+                    <span id="tax" class="font-bold">$0.00</span>
                 </div>
                 <div class="flex justify-between items-center text-2xl font-bold text-gray-900 mt-3">
                     <span>Total:</span>
-                    <span id="cart-total">$0.00</span>
+                    <span id="total">$0.00</span>
                 </div>
             </div>
 
             <!-- Action Buttons -->
             <div class="mt-6 flex flex-col sm:flex-row gap-4">
-                <button id="process-sale" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105">
+                <button id="complete-sale-btn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105">
                     Process Sale
                 </button>
-                <button id="clear-cart" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105">
+                <button id="clear-sale-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition duration-300 transform hover:scale-105">
                     Clear Cart
                 </button>
             </div>

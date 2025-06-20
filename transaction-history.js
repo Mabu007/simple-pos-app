@@ -100,27 +100,33 @@
             }
             if (savedSettings) {
                 businessSettings = JSON.parse(savedSettings);
-                console.log("Business settings loaded:", businessSettings); // Debug log
+                // Ensure saleCounter exists for consistency, although script.js manages its increment
+                if (typeof businessSettings.saleCounter === 'undefined') {
+                    businessSettings.saleCounter = 1;
+                }
             } else {
-                // Default settings if not found
+                // Default settings if not found - added illustrative defaults
                 console.log("No business settings found, initializing defaults."); // Debug log
                 businessSettings = {
                     businessName: 'My Small Business POS',
                     taxRate: 10,
                     currencySymbol: '$',
-                    businessAddress: '', // Default empty
-                    businessPhone: '',   // Default empty
-                    businessEmail: '',   // Default empty
-                    businessRegNo: '', // Default empty
-                    taxNumber: '',   // Default empty
-                    technicianName: 'Technician', // Default value, changed from cashierName
-                    bankName: '',
-                    accountHolder: '',
-                    accountNumber: '',
-                    branchCode: '',
-                    businessLogo: '' // Default empty logo
+                    businessAddress: '123 Main Street, Anytown, 12345', // Illustrative default
+                    businessPhone: '+1 (555) 123-4567',   // Illustrative default
+                    businessEmail: 'info@mysmallbusiness.com',   // Illustrative default
+                    businessRegNo: 'REG12345', // Illustrative default
+                    taxNumber: 'TAX98765',   // Illustrative default
+                    bankName: 'Sample Bank',
+                    accountHolder: 'My Business Inc.',
+                    accountNumber: '123456789',
+                    branchCode: '987654',
+                    businessLogo: '', // Default empty logo
+                    saleCounter: 1 // Initialize sale counter here as well for consistency
                 };
             }
+             // Always save settings back to ensure any newly initialized properties are persisted
+             localStorage.setItem('posBusinessSettings', JSON.stringify(businessSettings));
+
         } catch (e) {
             console.error("Error loading data from localStorage:", e);
             showMessageBox("Could not load transaction history.");
@@ -207,7 +213,6 @@
         const businessName = businessSettings.businessName || 'Your Business';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A'; // Changed from cashierName
 
         let yPos = 20; // Starting Y position for text
 
@@ -222,9 +227,8 @@
             // Transaction Details
             doc.setFontSize(10);
             doc.text(`Transaction ID: ${transaction.id}`, 10, yPos);
-            doc.text(`Date: ${new Date(transaction.timestamp).toLocaleString()}`, 10, yPos + 5);
-            doc.text(`Technician: ${technicianName}`, 10, yPos + 10); // Changed label to Technician
-            yPos += 20;
+            doc.text(`Date: ${new Date(transaction.timestamp).toLocaleString()}`, 10, yPos + 5); // Changed to toLocaleString()
+            yPos += 15; // Adjusted yPos since technician line is removed
 
             // Items Table Header
             doc.setFontSize(12);
@@ -300,92 +304,127 @@
         const businessName = businessSettings.businessName || 'Your Business';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A'; // Using technicianName
 
-
-        let yPos = 20;
+        let yPos = 20; // Initial yPos, will be updated by addPageHeader
         let pageNumber = 1;
 
-        const addPageHeader = () => {
-            // Draw header on each new page
-            drawHeaderWithLogoAndInfo(doc, 20, (updatedYPos) => {
-                yPos = updatedYPos + 5; // Buffer after header
-
-                doc.setFontSize(18);
-                doc.text('CONSOLIDATED SALES REPORT', 105, yPos, { align: 'center' });
-                yPos += 10;
-                doc.setFontSize(10);
-                doc.text(`Report Generated: ${new Date().toLocaleString()}`, 105, yPos, { align: 'center' });
-                yPos += 15;
-
-                doc.setFontSize(12);
-                doc.text('Transaction ID', 10, yPos);
-                doc.text('Date', 70, yPos);
-                doc.text('Technician', 130, yPos); // Display Technician in report
-                doc.text('Total', 200, yPos, { align: 'right' });
-                yPos += 5;
-                doc.line(10, yPos, 200, yPos);
-                yPos += 5;
-                console.log(`Added header for page ${pageNumber}.`); // Debug log
+        // Function to set up a page's header (including logo)
+        const setupPageHeader = (docInstance, pageStartY) => {
+            return new Promise(resolve => {
+                drawHeaderWithLogoAndInfo(docInstance, pageStartY, (y) => {
+                    resolve(y);
+                });
             });
         };
 
-        addPageHeader(); // Initial header for the first page
+        // Async function to generate the entire PDF
+        (async () => {
+            yPos = await setupPageHeader(doc, 10);
+            yPos += 5; // Buffer after logo/business info for first page content
 
-        let totalRevenue = 0;
-        let totalTaxCollected = 0;
-        const lineSpacing = 7; // Estimated vertical space for each transaction row
-        const footerHeight = 40; // Estimated height for summary and footer on the last page
+            // Add main report title and date for the first page
+            doc.setFontSize(18);
+            doc.text('CONSOLIDATED SALES REPORT', 105, yPos, { align: 'center' });
+            yPos += 10;
+            doc.setFontSize(10);
+            doc.text(`Report Generated: ${new Date().toLocaleString()}`, 105, yPos, { align: 'center' });
+            yPos += 15;
 
-        // Sort transactions by timestamp in ascending order for the report
-        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            // Add table headers for sales data
+            doc.setFontSize(12);
+            doc.text('Transaction ID', 10, yPos);
+            doc.text('Date', 70, yPos); // Adjusted X position for date/time
+            doc.text('Items', 110, yPos); // New column for items
+            doc.text('Total', 200, yPos, { align: 'right' });
+            yPos += 5;
+            doc.line(10, yPos, 200, yPos);
+            yPos += 5;
 
+            let totalRevenue = 0;
+            let totalTaxCollected = 0;
+            const lineSpacing = 7;
+            const itemIndentX = 115; // Indent for item details, adjusted to align under 'Items' column
 
-        sortedTransactions.forEach((transaction, index) => {
-            // Check if new page is needed for the next transaction item
-            if (yPos + lineSpacing > (doc.internal.pageSize.height - footerHeight)) {
-                doc.addPage();
-                pageNumber++;
-                yPos = 20; // Reset Y position for new page
-                addPageHeader(); // Draw header for the new page
+            const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            for (const transaction of sortedTransactions) {
+                // Estimate lines needed for this transaction: 1 for transaction summary + N for items
+                const linesNeeded = 1 + transaction.items.length;
+                if (yPos + (linesNeeded * lineSpacing) > (doc.internal.pageSize.height - 40)) { // 40 is approx footer margin
+                    doc.addPage();
+                    pageNumber++;
+                    yPos = await setupPageHeader(doc, 10); // Await header drawing for new page
+                    yPos += 5; // Buffer after logo/business info for new page content
+
+                    doc.setFontSize(18);
+                    doc.text('CONSOLIDATED SALES REPORT', 105, yPos, { align: 'center' });
+                    yPos += 10;
+                    doc.setFontSize(10);
+                    doc.text(`Report Generated: ${new Date().toLocaleString()}`, 105, yPos, { align: 'center' });
+                    yPos += 15;
+
+                    doc.setFontSize(12);
+                    doc.text('Transaction ID', 10, yPos);
+                    doc.text('Date', 70, yPos);
+                    doc.text('Items', 110, yPos);
+                    doc.text('Total', 200, yPos, { align: 'right' });
+                    yPos += 5;
+                    doc.line(10, yPos, 200, yPos);
+                    yPos += 5;
+                }
+
+                // Transaction summary row
+                doc.setFontSize(10);
+                const displayDateTime = new Date(transaction.timestamp).toLocaleString();
+                
+                // Make Transaction ID bold
+                doc.setFont('helvetica', 'bold');
+                doc.text(transaction.id, 10, yPos);
+                // Reset font to normal for the rest of the line
+                doc.setFont('helvetica', 'normal');
+
+                doc.text(displayDateTime, 70, yPos);
+                doc.text(`${currencySymbol}${transaction.total.toFixed(2)}`, 200, yPos, { align: 'right' });
+                yPos += lineSpacing;
+
+                // Loop through items for this transaction
+                doc.setFontSize(9); // Smaller font for item details
+                transaction.items.forEach(item => {
+                    // Removed hyphen '-' and align to itemIndentX
+                    const itemLine = `${item.name} (x${item.quantity}) @ ${currencySymbol}${item.price.toFixed(2)}`;
+                    doc.text(itemLine, itemIndentX, yPos); // Align items under the "Items" header
+                    yPos += lineSpacing;
+                });
+                yPos += 3; // Small extra space after items for readability
+
+                totalRevenue += transaction.total;
+                totalTaxCollected += transaction.tax;
             }
 
+            // Final Summary
+            const summaryHeight = 40;
+            if (yPos + summaryHeight > doc.internal.pageSize.height) {
+                doc.addPage();
+                yPos = 20;
+                pageNumber++;
+            }
+
+            doc.line(10, yPos, 200, yPos);
+            yPos += 10;
+            doc.setFontSize(14);
+            doc.text(`Total Revenue: ${currencySymbol}${totalRevenue.toFixed(2)}`, 10, yPos);
+            yPos += 7;
+            doc.text(`Total Tax Collected: ${currencySymbol}${totalTaxCollected.toFixed(2)}`, 10, yPos);
+            yPos += 15;
+
             doc.setFontSize(10);
-            const displayDate = new Date(transaction.timestamp).toLocaleDateString();
-            doc.text(transaction.id, 10, yPos);
-            doc.text(displayDate, 70, yPos);
-            doc.text(transaction.technician || 'N/A', 130, yPos); // Display technician for this transaction
-            doc.text(`${currencySymbol}${transaction.total.toFixed(2)}`, 200, yPos, { align: 'right' });
-            yPos += lineSpacing;
+            doc.text(`End of Report - Page ${pageNumber}`, 105, yPos, { align: 'center' });
 
-            totalRevenue += transaction.total;
-            totalTaxCollected += transaction.tax;
-        });
-
-        // Final Summary (always on a new page if not enough space)
-        if (yPos + footerHeight > doc.internal.pageSize.height) {
-            doc.addPage();
-            yPos = 20;
-            pageNumber++;
-            addPageHeader(); // Re-add header for the new summary page
-        }
-
-        doc.line(10, yPos, 200, yPos);
-        yPos += 10;
-        doc.setFontSize(14);
-        doc.text(`Total Revenue: ${currencySymbol}${totalRevenue.toFixed(2)}`, 10, yPos);
-        yPos += 7;
-        doc.text(`Total Tax Collected: ${currencySymbol}${totalTaxCollected.toFixed(2)}`, 10, yPos);
-        yPos += 15;
-
-        doc.setFontSize(10);
-        doc.text(`End of Report - Page ${pageNumber}`, 105, yPos, { align: 'center' });
-
-
-        const filename = `Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
-        doc.save(filename);
-        showMessageBox(`Consolidated Sales Report "${filename}" downloaded!`);
-        console.log(`Consolidated Sales Report "${filename}" downloaded successfully.`); // Debug log
+            const filename = `Sales_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(filename);
+            showMessageBox(`Consolidated Sales Report "${filename}" downloaded!`);
+            console.log(`Consolidated Sales Report "${filename}" downloaded successfully.`);
+        })(); // Self-executing async function
     }
 
 
@@ -415,7 +454,6 @@
         const taxNumber = businessSettings.taxNumber || 'N/A';
         const currencySymbol = businessSettings.currencySymbol || '$';
         const taxRate = businessSettings.taxRate || 0;
-        const technicianName = businessSettings.technicianName || 'N/A'; // Using technicianName from settings
         const businessLogo = businessSettings.businessLogo || '';
 
         // Bank Account Details for PDF
@@ -492,9 +530,6 @@
             yPos += 15;
 
             // Notes/Payment Terms
-            doc.setFontSize(10);
-            doc.text(`Technician: ${technicianName}`, 10, yPos); // Display technician name
-            yPos += 5;
             doc.text('Payment Terms: Due upon receipt.', 10, yPos);
             yPos += 10;
             
@@ -565,16 +600,20 @@
         } else {
             noTransactionsMessage.classList.add('hidden');
             // Sort transactions by timestamp in descending order (most recent first)
-            const sortedTransactions = [...transactions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const sortedTransactions = [...transactions].
+                filter(t => t && t.timestamp). // Ensure transaction and timestamp exist
+                sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             console.log(`Displaying ${sortedTransactions.length} sorted transactions.`); // Debug log
 
             sortedTransactions.forEach(transaction => {
                 const transactionItem = document.createElement('div');
                 transactionItem.className = 'bg-white rounded-lg shadow-md p-4 border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center';
+                // Ensure valid date/time format using toLocaleString()
+                const transactionDateTime = new Date(transaction.timestamp).toLocaleString();
                 transactionItem.innerHTML = `
                     <div class="mb-3 md:mb-0">
                         <h3 class="font-semibold text-gray-800 text-lg">Transaction ID: ${transaction.id}</h3>
-                        <p class="text-gray-600 text-sm">${new Date(transaction.timestamp).toLocaleString()}</p>
+                        <p class="text-gray-600 text-sm">Date: ${transactionDateTime}</p>
                         <p class="font-bold text-blue-600 text-xl">${businessSettings.currencySymbol}${transaction.total.toFixed(2)}</p>
                     </div>
                     <div class="w-full md:w-auto flex flex-col sm:flex-row gap-2">
@@ -603,7 +642,6 @@
                     if (transaction) {
                         let details = `Transaction ID: ${transaction.id}\n`;
                         details += `Date: ${new Date(transaction.timestamp).toLocaleString()}\n`;
-                        details += `Technician: ${transaction.technician || 'N/A'}\n`; // Display technician
                         details += `\nItems:\n`;
                         transaction.items.forEach(item => {
                             details += `- ${item.name} (x${item.quantity}): ${businessSettings.currencySymbol}${(item.price * item.quantity).toFixed(2)}\n`;
@@ -662,3 +700,4 @@
     messageBox.style.visibility = 'hidden';
     messageBox.classList.add('hidden'); // Ensure it starts hidden
 })();
+ 

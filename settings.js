@@ -11,7 +11,7 @@
     const businessEmailInput = document.getElementById('business-email');
     const businessRegNoInput = document.getElementById('business-reg-no');
     const taxNumberInput = document.getElementById('tax-number');
-    const technicianNameInput = document.getElementById('technician-name'); // Changed from cashier-name
+   
     const businessLogoUpload = document.getElementById('business-logo-upload');
     const businessLogoPreview = document.getElementById('business-logo-preview');
 
@@ -133,7 +133,7 @@
                 businessEmailInput.value = businessSettings.businessEmail || '';
                 businessRegNoInput.value = businessSettings.businessRegNo || '';
                 taxNumberInput.value = businessSettings.taxNumber || '';
-                technicianNameInput.value = businessSettings.technicianName || ''; // Changed from cashierName
+               
 
                 // Load bank account details
                 bankNameInput.value = businessSettings.bankName || '';
@@ -154,8 +154,7 @@
                     businessEmail: '',
                     businessRegNo: '',
                     taxNumber: '',
-                    technicianName: 'Technician', // Changed default from 'Cashier'
-                    // New default bank account details
+                   
                     bankName: '',
                     accountHolder: '',
                     accountNumber: '',
@@ -342,7 +341,7 @@
             businessSettings.businessEmail = businessEmailInput.value.trim();
             businessSettings.businessRegNo = businessRegNoInput.value.trim();
             businessSettings.taxNumber = taxNumberInput.value.trim();
-            businessSettings.technicianName = technicianNameInput.value.trim(); // Changed from cashierName
+          
 
             // New: Save bank account details
             businessSettings.bankName = bankNameInput.value.trim();
